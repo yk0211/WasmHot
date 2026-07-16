@@ -4,7 +4,7 @@ project(WasmHot)
 set(CMAKE_CXX_STANDARD 20)
 set(CMAKE_CXX_STANDARD_REQUIRED ON)
 
-option(WASM_HOT_USE_WASMTIME "Enable Wasmtime WASM runtime integration" OFF)
+option(WASM_HOT_USE_WASMEDGE "Enable WasmEdge WASM runtime integration" OFF)
 
 add_executable(WasmHotServer
     src/main.cpp
@@ -20,15 +20,16 @@ add_executable(WasmHotServer
     src/actor/mail_actor.cpp
     src/network/gateway.cpp
     src/plugin/native_plugin.cpp
-    src/plugin/wasmtime_plugin.cpp
+    src/plugin/wasmedge_plugin.cpp
 )
 
 target_include_directories(WasmHotServer PRIVATE src)
 
-if(WASM_HOT_USE_WASMTIME)
-    find_package(wasmtime REQUIRED)
-    target_link_libraries(WasmHotServer PRIVATE wasmtime)
-    target_compile_definitions(WasmHotServer PRIVATE WASM_HOT_USE_WASMTIME=1)
+if(WASM_HOT_USE_WASMEDGE)
+    find_package(WasmEdge REQUIRED)
+    # Adjust the target name if your WasmEdge installation uses a different exported target.
+    target_link_libraries(WasmHotServer PRIVATE wasmedge)
+    target_compile_definitions(WasmHotServer PRIVATE WASM_HOT_USE_WASMEDGE=1)
 endif()
 
 if(UNIX)

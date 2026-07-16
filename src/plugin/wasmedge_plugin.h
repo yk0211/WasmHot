@@ -3,14 +3,14 @@
 
 namespace wasmh {
 
-// WasmtimePlugin loads a WASM module through the Wasmtime runtime.
-// When WASM_HOT_USE_WASMTIME is defined, real wasmtime symbols are used;
+// WasmEdgePlugin loads a WASM module through the WasmEdge runtime.
+// When WASM_HOT_USE_WASMEDGE is defined, real WasmEdge symbols are used;
 // otherwise the class compiles as a stub that reports initialization failure.
-class WasmtimePlugin : public IPlugin
+class WasmEdgePlugin : public IPlugin
 {
 public:
-    WasmtimePlugin(const std::string& path, uint32_t schema_version);
-    ~WasmtimePlugin() override;
+    WasmEdgePlugin(const std::string& path, uint32_t schema_version);
+    ~WasmEdgePlugin() override;
 
     bool Initialize() override;
     void Shutdown() override;
@@ -23,14 +23,14 @@ private:
     uint32_t schema_version_;
     bool initialized_ = false;
 
-#if WASM_HOT_USE_WASMTIME
+#if WASM_HOT_USE_WASMEDGE
     // Opaque handles owned by this plugin instance.
-    struct WasmtimeState;
-    std::unique_ptr<WasmtimeState> state_;
+    struct WasmEdgeState;
+    std::unique_ptr<WasmEdgeState> state_;
 #endif
 };
 
-class WasmtimePluginFactory : public PluginFactory
+class WasmEdgePluginFactory : public PluginFactory
 {
 public:
     std::unique_ptr<IPlugin> Create(const std::string& path, uint32_t schema_version) override;
