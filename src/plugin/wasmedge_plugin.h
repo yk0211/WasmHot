@@ -2,10 +2,6 @@
 #include "core/plugin_interface.h"
 
 namespace wasmh {
-
-// WasmEdgePlugin loads a WASM module through the WasmEdge runtime.
-// When WASM_HOT_USE_WASMEDGE is defined, real WasmEdge symbols are used;
-// otherwise the class compiles as a stub that reports initialization failure.
 class WasmEdgePlugin : public IPlugin
 {
 public:

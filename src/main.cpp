@@ -12,7 +12,7 @@
 #include "actor/battle_actor.h"
 #include "actor/room_actor.h"
 #include "network/gateway.h"
-#include "plugin/native_plugin.h"
+#include "plugin/wasmedge_plugin.h"
 
 using namespace wasmh;
 
@@ -67,10 +67,10 @@ int main()
         std::cout << "Migrated player to schema v2\n";
     }
 
-    // Module manager
-    auto plugin_factory = std::make_unique<NativePluginFactory>();
+    // Module manager - WASM only
+    auto plugin_factory = std::make_unique<WasmEdgePluginFactory>();
     ModuleManager modules(std::move(plugin_factory));
-    // modules.Load({"battle_rules", PluginType::Native, "./libbattle.so", 2});
+    modules.Load({"battle_rules", PluginType::WASM, "./test/battle_plugin.wasm", 2});
 
     // Actor runtime
     ActorRuntime runtime;
