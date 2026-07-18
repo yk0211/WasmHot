@@ -19,11 +19,8 @@ private:
     uint32_t schema_version_;
     bool initialized_ = false;
 
-#if WASM_HOT_USE_WASMEDGE
-    // Opaque handles owned by this plugin instance.
     struct WasmEdgeState;
     std::unique_ptr<WasmEdgeState> state_;
-#endif
 };
 
 class WasmEdgePluginFactory : public PluginFactory

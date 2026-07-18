@@ -3,7 +3,7 @@
 namespace wasmh {
 
 BattleActor::BattleActor(uint64_t id, GameObject* battle_obj, ModuleManager* modules)
-    : battle_object_(battle_obj), modules_(modules)
+    : ActorWithObject(battle_obj, modules)
 {
     actor_id = id;
 }
@@ -21,18 +21,6 @@ void BattleActor::HandleMessage(uint64_t sender_id, const std::vector<uint8_t>& 
 {
     (void)sender_id;
     InvokeModule("battle_rules", "handle_message", payload);
-}
-
-void BattleActor::InvokeModule(const std::string& module_name, const std::string& action,
-                               const std::vector<uint8_t>& input)
-{
-    if (!modules_) return;
-    IPlugin* plugin = modules_->Get(module_name);
-    if (!plugin) return;
-
-    std::vector<uint8_t> output;
-    plugin->Execute(*battle_object_, action, input, output);
-    // Native runtime applies output to component storage; WASM does not keep state.
 }
 
 } // namespace wasmh

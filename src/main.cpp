@@ -70,7 +70,7 @@ int main()
     // Module manager - WASM only
     auto plugin_factory = std::make_unique<WasmEdgePluginFactory>();
     ModuleManager modules(std::move(plugin_factory));
-    modules.Load({"battle_rules", PluginType::WASM, "./test/battle_plugin.wasm", 2});
+    modules.Load({"battle_rules", "./wasm/battle_plugin.wasm", 2});
 
     // Actor runtime
     ActorRuntime runtime;

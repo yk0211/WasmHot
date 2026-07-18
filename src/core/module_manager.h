@@ -1,4 +1,5 @@
 #pragma once
+#include <shared_mutex>
 #include <string>
 #include <memory>
 #include <unordered_map>
@@ -6,17 +7,9 @@
 
 namespace wasmh {
 
-enum class PluginType : uint8_t
-{
-    Native = 1,
-    WASM = 2,
-    Lua = 3
-};
-
 struct ModuleConfig
 {
     std::string name;
-    PluginType type;
     std::string path;
     uint32_t schema_version;
 };
@@ -29,14 +22,19 @@ public:
     explicit ModuleManager(std::unique_ptr<PluginFactory> factory);
 
     bool Load(const ModuleConfig& config);
+    bool HotReload(const ModuleConfig& config);
+    void Rollback(const std::string& name);
     void Unload(const std::string& name);
-    IPlugin* Get(const std::string& name) const;
+    std::shared_ptr<IPlugin> Get(const std::string& name) const;
     uint32_t GetLoadedSchemaVersion(const std::string& name) const;
 
 private:
     std::unique_ptr<PluginFactory> factory_;
-    std::unordered_map<std::string, std::unique_ptr<IPlugin>> modules_;
+    std::unordered_map<std::string, std::shared_ptr<IPlugin>> modules_;
+    std::unordered_map<std::string, std::shared_ptr<IPlugin>> previous_modules_;
+    std::unordered_map<std::string, ModuleConfig> configs_;
     std::unordered_map<std::string, uint32_t> schema_versions_;
+    mutable std::shared_mutex mutex_;
 };
 
 } // namespace wasmh

@@ -2,6 +2,7 @@
 #include <cstdint>
 #include <vector>
 #include <unordered_map>
+#include "core/schema_manager.h"
 
 namespace wasmh {
 
@@ -32,7 +33,9 @@ public:
     ComponentData* GetComponent(ComponentType type);
     const ComponentData* GetComponent(ComponentType type) const;
     void SetComponent(ComponentType type, ComponentData data);
+    bool SetComponent(ComponentType type, const Schema& schema, ComponentData data);
     bool RemoveComponent(ComponentType type);
+    bool ApplyOutputDelta(const std::vector<uint8_t>& output);
 };
 
 } // namespace wasmh

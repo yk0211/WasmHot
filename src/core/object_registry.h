@@ -1,6 +1,7 @@
 #pragma once
 #include <cstdint>
 #include <memory>
+#include <shared_mutex>
 #include <unordered_map>
 #include "core/object.h"
 #include "core/component_storage.h"
@@ -22,6 +23,7 @@ public:
 
 private:
     ComponentStorage* storage_;
+    mutable std::shared_mutex mutex_;
     std::unordered_map<uint64_t, std::unique_ptr<GameObject>> objects_;
 };
 
