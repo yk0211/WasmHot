@@ -4,11 +4,13 @@ namespace wasmh {
 
 void SchemaManager::RegisterSchema(const Schema& schema)
 {
+    std::unique_lock lock(mutex_);
     schemas_[schema.object_type][schema.version] = schema;
 }
 
 const Schema* SchemaManager::GetSchema(uint32_t object_type, uint32_t version) const
 {
+    std::shared_lock lock(mutex_);
     auto it = schemas_.find(object_type);
     if (it == schemas_.end()) return nullptr;
     auto jt = it->second.find(version);
@@ -17,6 +19,7 @@ const Schema* SchemaManager::GetSchema(uint32_t object_type, uint32_t version) c
 
 std::optional<uint32_t> SchemaManager::GetLatestVersion(uint32_t object_type) const
 {
+    std::shared_lock lock(mutex_);
     auto it = schemas_.find(object_type);
     if (it == schemas_.end()) return std::nullopt;
 

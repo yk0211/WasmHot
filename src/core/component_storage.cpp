@@ -1,52 +1,69 @@
-#include <mutex>
-
 #include "core/component_storage.h"
 
 namespace wasmh {
 
-ComponentData* ComponentStorage::Get(uint64_t object_id, ComponentType type)
+void ComponentStorage::Read(uint64_t object_id, ComponentType type, ReadCallback callback) const
 {
-    std::shared_lock lock(mutex_);
+    std::shared_lock map_lock(map_mutex_);
     auto it = store_.find(object_id);
-    if (it == store_.end()) return nullptr;
-    auto jt = it->second.find(type);
-    return jt != it->second.end() ? &jt->second : nullptr;
+    if (it == store_.end()) {
+        callback(nullptr);
+        return;
+    }
+
+    std::lock_guard obj_lock(it->second->mutex);
+    auto jt = it->second->components.find(type);
+    callback(jt != it->second->components.end() ? &jt->second : nullptr);
 }
 
-const ComponentData* ComponentStorage::Get(uint64_t object_id, ComponentType type) const
+void ComponentStorage::Write(uint64_t object_id, ComponentType type, ComponentData data)
 {
-    std::shared_lock lock(mutex_);
+    std::unique_ptr<ObjectComponents> new_obj;
+
+    std::shared_lock map_lock(map_mutex_);
     auto it = store_.find(object_id);
-    if (it == store_.end()) return nullptr;
-    auto jt = it->second.find(type);
-    return jt != it->second.end() ? &jt->second : nullptr;
+    if (it == store_.end()) {
+        map_lock.unlock();
+        new_obj = std::make_unique<ObjectComponents>();
+        std::unique_lock unique_map_lock(map_mutex_);
+        auto& slot = store_[object_id];
+        if (!slot) slot = std::move(new_obj);
+        it = store_.find(object_id);
+    }
+
+    std::lock_guard obj_lock(it->second->mutex);
+    it->second->components[type] = std::move(data);
 }
 
-void ComponentStorage::Set(uint64_t object_id, ComponentType type, ComponentData data)
-{
-    std::unique_lock lock(mutex_);
-    store_[object_id][type] = std::move(data);
-}
-
-bool ComponentStorage::Set(uint64_t object_id, ComponentType type, const Schema& schema, ComponentData data)
+bool ComponentStorage::Write(uint64_t object_id, ComponentType type, const Schema& schema, ComponentData data)
 {
     if (data.size() != schema.total_size) return false;
-    Set(object_id, type, std::move(data));
+    Write(object_id, type, std::move(data));
     return true;
 }
 
 bool ComponentStorage::Remove(uint64_t object_id, ComponentType type)
 {
-    std::unique_lock lock(mutex_);
+    std::shared_lock map_lock(map_mutex_);
     auto it = store_.find(object_id);
     if (it == store_.end()) return false;
-    return it->second.erase(type) > 0;
+
+    std::lock_guard obj_lock(it->second->mutex);
+    return it->second->components.erase(type) > 0;
 }
 
 void ComponentStorage::RemoveAll(uint64_t object_id)
 {
-    std::unique_lock lock(mutex_);
-    store_.erase(object_id);
+    std::unique_lock map_lock(map_mutex_);
+    auto it = store_.find(object_id);
+    if (it == store_.end()) return;
+
+    {
+        // Synchronize with any thread currently operating on this object's
+        // components before erasing the object.
+        std::lock_guard obj_lock(it->second->mutex);
+    }
+    store_.erase(it);
 }
 
 } // namespace wasmh

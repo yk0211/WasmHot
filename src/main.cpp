@@ -1,85 +1,122 @@
-#include <algorithm>
-#include <cstring>
-#include <iostream>
+#include <chrono>
+#include <cstdint>
+#include <cstdio>
+#include <filesystem>
+#include <functional>
 #include <memory>
-#include "core/object.h"
+#include <string>
+#include <thread>
+#include <vector>
+
+#include <asio.hpp>
+#include <CLI/CLI.hpp>
+#include <spdlog/common.h>
+#include <yaml-cpp/yaml.h>
+
+#include "actor/actor_runtime.h"
 #include "core/component_storage.h"
-#include "core/object_registry.h"
-#include "core/schema_manager.h"
+#include "core/logging.h"
 #include "core/migration_engine.h"
 #include "core/module_manager.h"
-#include "actor/actor_runtime.h"
-#include "actor/battle_actor.h"
-#include "actor/room_actor.h"
-#include "network/gateway.h"
+#include "core/object_registry.h"
+#include "core/schema_manager.h"
+#include "core/gateway.h"
 #include "plugin/wasmedge_plugin.h"
 
 using namespace wasmh;
 
-int main()
+struct ServerConfig
 {
-    // Schema management
-    SchemaManager schema_manager;
-    schema_manager.RegisterSchema({1, 1, {
-        {"hp", FieldType::Int32, 0, 4},
-        {"atk", FieldType::Int32, 4, 4}
-    }, 8});
-    schema_manager.RegisterSchema({2, 1, {
-        {"hp", FieldType::Int32, 0, 4},
-        {"atk", FieldType::Int32, 4, 4},
-        {"def", FieldType::Int32, 8, 4}
-    }, 12});
+    std::string server_name = "";
+    std::string listen_ip = "127.0.0.1";
+    uint16_t listen_port = 8080;
+    std::size_t thread_num = 1;
+    std::string log_level = "info";
+    std::string flush_log_level = "warn";
+    std::size_t max_file_size = 100 * 1024 * 1024;
+    std::size_t max_rotate_file_num = 10;
+};
 
-    // Migration engine
-    MigrationEngine migration_engine;
-    migration_engine.Register(1, 2, [](GameObject& obj, uint32_t from, uint32_t to) -> bool {
-        (void)from;
-        (void)to;
-        auto* old_data = obj.GetComponent(1); // component type 1 = stats
-        if (!old_data || old_data->size() != 8) return false;
-        std::vector<uint8_t> new_data(12);
-        std::copy(old_data->begin(), old_data->end(), new_data.begin());
-        // set def = 0
-        new_data[8] = 0; new_data[9] = 0; new_data[10] = 0; new_data[11] = 0;
-        obj.SetComponent(1, std::move(new_data));
-        return true;
-    });
-
-    // Component storage
-    ComponentStorage storage;
-
-    // Object registry
-    ObjectRegistry registry(&storage);
-    ObjectHeader player_header{1, 1, 1001};
-    GameObject* player = registry.Create(player_header);
-
-    // Set initial player stats (v1)
-    std::vector<uint8_t> stats(8);
-    int32_t hp = 100;
-    int32_t atk = 20;
-    std::memcpy(&stats[0], &hp, sizeof(hp));
-    std::memcpy(&stats[4], &atk, sizeof(atk));
-    player->SetComponent(1, std::move(stats));
-
-    // Migrate to v2
-    if (registry.Migrate(1001, 2, migration_engine))
-    {
-        std::cout << "Migrated player to schema v2\n";
+int32_t LoadServerConfig(const std::string& config_path, ServerConfig &server_config)
+{
+    try {
+        YAML::Node config = YAML::LoadFile(config_path);
+        server_config.server_name = config["server_name"].as<std::string>();
+        server_config.listen_ip = config["listen_ip"].as<std::string>();
+        server_config.listen_port = config["listen_port"].as<uint16_t>();
+        server_config.thread_num = config["thread_num"].as<std::size_t>();
+        server_config.log_level = config["log_level"].as<std::string>();
+        server_config.flush_log_level = config["flush_log_level"].as<std::string>();
+        server_config.max_file_size = config["max_file_size"].as<std::size_t>();
+        server_config.max_rotate_file_num = config["max_rotate_file_num"].as<std::size_t>();
+    } catch (const YAML::BadFile& e) {
+        std::fprintf(stderr, "Error: failed to open config file: %s\n", e.what());
+        return -1;
+    } catch (const YAML::ParserException& e) {
+        std::fprintf(stderr, "Error: invalid YAML format: %s\n", e.what());
+        return -1;
+    } catch (const YAML::Exception& e) {
+        std::fprintf(stderr, "Error: failed to read config field: %s\n", e.what());
+        return -1;
+    } catch (const std::exception& e) {
+        std::fprintf(stderr, "Error: unexpected exception while reading config: %s\n", e.what());
+        return -1;
+    } catch (...) {
+        std::fprintf(stderr, "Error: unknown exception while reading config\n");
+        return -1;
     }
 
-    // Module manager - WASM only
-    auto plugin_factory = std::make_unique<WasmEdgePluginFactory>();
-    ModuleManager modules(std::move(plugin_factory));
-    modules.Load({"battle_rules", "./wasm/battle_plugin.wasm", 2});
+    return 0;
+}
 
-    // Actor runtime
-    ActorRuntime runtime;
-    ObjectHeader battle_header{2, 2, 2001};
-    GameObject* battle = registry.Create(battle_header);
-    runtime.Spawn(std::make_unique<BattleActor>(2001, battle, &modules));
+int32_t main(int32_t argc, char *argv[])
+{
+    std::string config_path;
 
-    runtime.Tick(0);
+    CLI::App app;
+    app.add_option("--config", config_path, "Path to configuration file (yaml/yml)")
+        ->required()
+        ->check(CLI::ExistingFile);
+    CLI11_PARSE(app, argc, argv);
 
-    std::cout << "WasmHot server initialized\n";
+    ServerConfig cfg;
+    if (LoadServerConfig(config_path, cfg) != 0)
+    {
+        std::fprintf(stderr, "Failed to load config: %s\n", config_path.c_str());
+        return -1;
+    }
+
+    InitLogging(cfg.server_name, cfg.log_level, cfg.flush_log_level, cfg.max_file_size, cfg.max_rotate_file_num);
+
+    // Initialize singleton managers.
+    ModuleManager::Instance()->Initialize(std::make_unique<WasmEdgePluginFactory>());
+
+    asio::io_context io(cfg.thread_num);
+    ActorRuntime::Instance()->Initialize(io);
+    CHECK_WITH_ERROR_LOG(Gateway::Instance()->Initialize(io, cfg.listen_ip, cfg.listen_port) == 0, "Failed to init gateway");
+
+    // Keep the io_context alive and drive the actor runtime tick loop.
+    asio::steady_timer tick_timer(io);
+    std::function<void(const asio::error_code&)> schedule_tick = [&](const asio::error_code& ec) {
+        if (ec) return;
+        const uint64_t now_ms = static_cast<uint64_t>(
+            std::chrono::duration_cast<std::chrono::milliseconds>(
+                std::chrono::steady_clock::now().time_since_epoch()).count());
+        ActorRuntime::Instance()->Tick(now_ms);
+        tick_timer.expires_after(std::chrono::milliseconds(16));
+        tick_timer.async_wait(schedule_tick);
+    };
+    tick_timer.expires_after(std::chrono::milliseconds(16));
+    tick_timer.async_wait(schedule_tick);
+
+    std::vector<std::thread> threads;
+    threads.reserve(cfg.thread_num);
+    for (size_t i = 0; i < cfg.thread_num; ++i) {
+        threads.emplace_back([&io]() { io.run(); });
+    }
+    for (auto& t : threads) {
+        t.join();
+    }
+
     return 0;
 }

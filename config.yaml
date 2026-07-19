@@ -1,0 +1,23 @@
+# WasmHot 服务端配置文件
+server_name: "WasmHot"
+
+# 监听ip 如果需要同时监听IPv4和IPv6需要改为::
+listen_ip: "::"
+
+# 监听端口
+listen_port: 8080
+
+# 线程数量
+thread_num: 4
+
+# 日志等级 (trace/debug/info/warn/error/critical/off)
+log_level: "info"
+
+# 日志大于等于此等级，立即写入文件
+flush_log_level: "warn"
+
+# 单个日志文件最大大小 (字节)
+max_file_size: 104857600
+
+# 日志达到最大容量后，滚动的最大文件数量
+max_rotate_file_num: 10

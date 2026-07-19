@@ -9,28 +9,36 @@ namespace {
 constexpr uint32_t kDeltaMagic = 0x4D534157; // "WASM" little-endian
 } // namespace
 
-ComponentData* GameObject::GetComponent(ComponentType type)
+void GameObject::ReadComponent(ComponentType type, ReadComponentCallback callback)
 {
-    return storage ? storage->Get(header.object_id, type) : nullptr;
+    if (!storage) {
+        callback(nullptr);
+        return;
+    }
+    storage->Read(header.object_id, type, std::move(callback));
 }
 
-const ComponentData* GameObject::GetComponent(ComponentType type) const
+void GameObject::ReadComponent(ComponentType type, ReadComponentCallback callback) const
 {
-    return storage ? storage->Get(header.object_id, type) : nullptr;
+    if (!storage) {
+        callback(nullptr);
+        return;
+    }
+    storage->Read(header.object_id, type, std::move(callback));
 }
 
-void GameObject::SetComponent(ComponentType type, ComponentData data)
+void GameObject::WriteComponent(ComponentType type, ComponentData data)
 {
     if (storage)
     {
-        storage->Set(header.object_id, type, std::move(data));
+        storage->Write(header.object_id, type, std::move(data));
     }
 }
 
-bool GameObject::SetComponent(ComponentType type, const Schema& schema, ComponentData data)
+bool GameObject::WriteComponent(ComponentType type, const Schema& schema, ComponentData data)
 {
     if (!storage) return false;
-    return storage->Set(header.object_id, type, schema, std::move(data));
+    return storage->Write(header.object_id, type, schema, std::move(data));
 }
 
 bool GameObject::RemoveComponent(ComponentType type)
@@ -49,7 +57,7 @@ bool GameObject::ApplyOutputDelta(const std::vector<uint8_t>& output)
     if (magic != kDeltaMagic) return false;
 
     ComponentData data(output.begin() + sizeof(uint32_t) * 2, output.end());
-    SetComponent(type, std::move(data));
+    WriteComponent(type, std::move(data));
     return true;
 }
 

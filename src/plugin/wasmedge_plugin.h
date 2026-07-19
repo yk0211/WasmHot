@@ -1,7 +1,11 @@
 #pragma once
+#include <cstdint>
+#include <memory>
+#include <string>
 #include "core/plugin_interface.h"
 
 namespace wasmh {
+
 class WasmEdgePlugin : public IPlugin
 {
 public:
@@ -13,14 +17,14 @@ public:
     bool Execute(GameObject& obj, const std::string& action,
                  const std::vector<uint8_t>& input,
                  std::vector<uint8_t>& output) override;
+    std::unique_ptr<IPlugin> Clone() const override;
 
 private:
-    std::string path_;
-    uint32_t schema_version_;
-    bool initialized_ = false;
-
     struct WasmEdgeState;
     std::unique_ptr<WasmEdgeState> state_;
+    std::string path_;
+    uint32_t schema_version_ = 0;
+    bool initialized_ = false;
 };
 
 class WasmEdgePluginFactory : public PluginFactory

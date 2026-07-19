@@ -2,8 +2,8 @@
 
 namespace wasmh {
 
-MailActor::MailActor(uint64_t id, GameObject* mail_obj, ModuleManager* modules)
-    : ActorWithObject(mail_obj, modules)
+MailActor::MailActor(asio::io_context& io, uint64_t id, uint64_t object_id)
+    : ActorWithObject(io, object_id, {"economy"})
 {
     actor_id = id;
 }

@@ -1,8 +1,9 @@
 #pragma once
+#include <memory>
 #include <shared_mutex>
 #include <string>
-#include <memory>
 #include <unordered_map>
+#include "common/singleton.h"
 #include "core/plugin_interface.h"
 
 namespace wasmh {
@@ -16,10 +17,12 @@ struct ModuleConfig
 
 // ModuleManager owns loaded logic modules. It is the hot-update entry point:
 // unload old version -> load new version -> migrate affected objects.
-class ModuleManager
+class ModuleManager : public Singleton<ModuleManager>
 {
+    friend class Singleton<ModuleManager>;
+
 public:
-    explicit ModuleManager(std::unique_ptr<PluginFactory> factory);
+    void Initialize(std::unique_ptr<PluginFactory> factory);
 
     bool Load(const ModuleConfig& config);
     bool HotReload(const ModuleConfig& config);
@@ -29,6 +32,8 @@ public:
     uint32_t GetLoadedSchemaVersion(const std::string& name) const;
 
 private:
+    ModuleManager() = default;
+
     std::unique_ptr<PluginFactory> factory_;
     std::unordered_map<std::string, std::shared_ptr<IPlugin>> modules_;
     std::unordered_map<std::string, std::shared_ptr<IPlugin>> previous_modules_;

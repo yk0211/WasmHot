@@ -2,8 +2,8 @@
 
 namespace wasmh {
 
-RoomActor::RoomActor(uint64_t id, GameObject* room_obj, ModuleManager* modules)
-    : ActorWithObject(room_obj, modules)
+RoomActor::RoomActor(asio::io_context& io, uint64_t id, uint64_t object_id)
+    : ActorWithObject(io, object_id, {"room"})
 {
     actor_id = id;
 }

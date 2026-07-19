@@ -2,8 +2,8 @@
 
 namespace wasmh {
 
-BattleActor::BattleActor(uint64_t id, GameObject* battle_obj, ModuleManager* modules)
-    : ActorWithObject(battle_obj, modules)
+BattleActor::BattleActor(asio::io_context& io, uint64_t id, uint64_t object_id)
+    : ActorWithObject(io, object_id, {"battle_rules", "ai_decision"})
 {
     actor_id = id;
 }

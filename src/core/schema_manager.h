@@ -1,9 +1,12 @@
 #pragma once
 #include <cstdint>
-#include <string>
-#include <vector>
-#include <unordered_map>
+#include <mutex>
 #include <optional>
+#include <shared_mutex>
+#include <string>
+#include <unordered_map>
+#include <vector>
+#include "common/singleton.h"
 
 namespace wasmh {
 
@@ -37,16 +40,21 @@ struct Schema
 
 // SchemaManager knows every object type and every supported schema version.
 // It is the source of truth for "what data shape is valid".
-class SchemaManager
+class SchemaManager : public Singleton<SchemaManager>
 {
+    friend class Singleton<SchemaManager>;
+
 public:
     void RegisterSchema(const Schema& schema);
     const Schema* GetSchema(uint32_t object_type, uint32_t version) const;
     std::optional<uint32_t> GetLatestVersion(uint32_t object_type) const;
 
 private:
+    SchemaManager() = default;
+
     // object_type -> (version -> Schema)
     std::unordered_map<uint32_t, std::unordered_map<uint32_t, Schema>> schemas_;
+    mutable std::shared_mutex mutex_;
 };
 
 } // namespace wasmh

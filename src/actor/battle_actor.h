@@ -9,9 +9,11 @@ namespace wasmh {
 class BattleActor : public ActorWithObject
 {
 public:
-    BattleActor(uint64_t id, GameObject* battle_obj, ModuleManager* modules);
+    BattleActor(asio::io_context& io, uint64_t id, uint64_t object_id);
 
     void Tick(uint64_t now_ms) override;
+
+protected:
     void HandleMessage(uint64_t sender_id, const std::vector<uint8_t>& payload) override;
 };
 

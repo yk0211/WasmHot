@@ -4,8 +4,11 @@
 
 namespace wasmh {
 
-ModuleManager::ModuleManager(std::unique_ptr<PluginFactory> factory)
-    : factory_(std::move(factory)) {}
+void ModuleManager::Initialize(std::unique_ptr<PluginFactory> factory)
+{
+    std::unique_lock lock(mutex_);
+    factory_ = std::move(factory);
+}
 
 bool ModuleManager::Load(const ModuleConfig& config)
 {

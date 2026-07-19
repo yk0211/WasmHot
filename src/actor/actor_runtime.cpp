@@ -2,39 +2,53 @@
 
 namespace wasmh {
 
-void ActorRuntime::Spawn(std::unique_ptr<Actor> actor)
+void ActorRuntime::Initialize(asio::io_context& io)
+{
+    io_ = &io;
+}
+
+void ActorRuntime::Spawn(std::shared_ptr<Actor> actor)
 {
     uint64_t id = actor->actor_id;
+    std::unique_lock lock(actors_mutex_);
     actors_[id] = std::move(actor);
 }
 
 void ActorRuntime::Kill(uint64_t actor_id)
 {
+    std::unique_lock lock(actors_mutex_);
     actors_.erase(actor_id);
 }
 
 void ActorRuntime::Tick(uint64_t now_ms)
 {
-    for (auto& [id, actor] : actors_)
+    std::vector<std::shared_ptr<Actor>> snapshot;
     {
-        (void)id;
-        actor->Tick(now_ms);
+        std::shared_lock lock(actors_mutex_);
+        snapshot.reserve(actors_.size());
+        for (const auto& [id, actor] : actors_)
+        {
+            (void)id;
+            snapshot.push_back(actor);
+        }
+    }
+
+    for (auto& actor : snapshot)
+    {
+        actor->ScheduleTick(now_ms);
     }
 }
 
 void ActorRuntime::SendMessage(uint64_t from_id, uint64_t to_id, const std::vector<uint8_t>& payload)
 {
-    auto it = actors_.find(to_id);
-    if (it != actors_.end())
+    std::shared_ptr<Actor> actor;
     {
-        it->second->HandleMessage(from_id, payload);
+        std::shared_lock lock(actors_mutex_);
+        auto it = actors_.find(to_id);
+        if (it == actors_.end()) return;
+        actor = it->second;
     }
-}
-
-Actor* ActorRuntime::GetActor(uint64_t actor_id)
-{
-    auto it = actors_.find(actor_id);
-    return it != actors_.end() ? it->second.get() : nullptr;
+    actor->EnqueueMessage(from_id, payload);
 }
 
 } // namespace wasmh

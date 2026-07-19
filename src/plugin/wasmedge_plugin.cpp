@@ -12,64 +12,65 @@ struct HostContext {
 thread_local HostContext g_host_ctx;
 
 WasmEdge_Result HostGetCurrentObjectId(void*, const WasmEdge_CallingFrameContext*,
-                                       const WasmEdge_Value*, WasmEdge_Value* Out)
+                                       const WasmEdge_Value*, WasmEdge_Value* out)
 {
-    Out[0] = WasmEdge_ValueGenI64(static_cast<int64_t>(g_host_ctx.object_id));
+    out[0] = WasmEdge_ValueGenI64(static_cast<int64_t>(g_host_ctx.object_id));
     return WasmEdge_Result_Success;
 }
 
 WasmEdge_Result HostGetComponent(void*, const WasmEdge_CallingFrameContext* frame,
-                                 const WasmEdge_Value* In, WasmEdge_Value* Out)
+                                 const WasmEdge_Value* in, WasmEdge_Value* out)
 {
-    uint64_t object_id = static_cast<uint64_t>(WasmEdge_ValueGetI64(In[0]));
-    uint32_t type = static_cast<uint32_t>(WasmEdge_ValueGetI32(In[1]));
-    uint32_t buf_ptr = static_cast<uint32_t>(WasmEdge_ValueGetI32(In[2]));
-    uint32_t buf_cap = static_cast<uint32_t>(WasmEdge_ValueGetI32(In[3]));
+    uint64_t object_id = static_cast<uint64_t>(WasmEdge_ValueGetI64(in[0]));
+    uint32_t type = static_cast<uint32_t>(WasmEdge_ValueGetI32(in[1]));
+    uint32_t buf_ptr = static_cast<uint32_t>(WasmEdge_ValueGetI32(in[2]));
+    uint32_t buf_cap = static_cast<uint32_t>(WasmEdge_ValueGetI32(in[3]));
 
     if (!g_host_ctx.storage) {
-        Out[0] = WasmEdge_ValueGenI32(-1);
+        out[0] = WasmEdge_ValueGenI32(-1);
         return WasmEdge_Result_Success;
     }
 
-    const wasmh::ComponentData* data = g_host_ctx.storage->Get(object_id, type);
-    if (!data) {
-        Out[0] = WasmEdge_ValueGenI32(0);
-        return WasmEdge_Result_Success;
-    }
-
-    uint32_t len = static_cast<uint32_t>(data->size());
-    if (len > buf_cap) {
-        Out[0] = WasmEdge_ValueGenI32(-2);
-        return WasmEdge_Result_Success;
-    }
-
-    if (len > 0) {
-        WasmEdge_MemoryInstanceContext* memory = WasmEdge_CallingFrameGetMemoryInstance(frame, 0);
-        if (!memory) {
-            Out[0] = WasmEdge_ValueGenI32(-3);
-            return WasmEdge_Result_Success;
+    g_host_ctx.storage->Read(object_id, type, [frame, buf_ptr, buf_cap, out](const wasmh::ComponentData* data) {
+        if (!data) {
+            out[0] = WasmEdge_ValueGenI32(0);
+            return;
         }
-        auto res = WasmEdge_MemoryInstanceSetData(memory, data->data(), buf_ptr, len);
-        if (!WasmEdge_ResultOK(res)) {
-            Out[0] = WasmEdge_ValueGenI32(-3);
-            return WasmEdge_Result_Success;
-        }
-    }
 
-    Out[0] = WasmEdge_ValueGenI32(static_cast<int32_t>(len));
+        uint32_t len = static_cast<uint32_t>(data->size());
+        if (len > buf_cap) {
+            out[0] = WasmEdge_ValueGenI32(-2);
+            return;
+        }
+
+        if (len > 0) {
+            WasmEdge_MemoryInstanceContext* memory = WasmEdge_CallingFrameGetMemoryInstance(frame, 0);
+            if (!memory) {
+                out[0] = WasmEdge_ValueGenI32(-3);
+                return;
+            }
+            auto res = WasmEdge_MemoryInstanceSetData(memory, data->data(), buf_ptr, len);
+            if (!WasmEdge_ResultOK(res)) {
+                out[0] = WasmEdge_ValueGenI32(-3);
+                return;
+            }
+        }
+
+        out[0] = WasmEdge_ValueGenI32(static_cast<int32_t>(len));
+    });
     return WasmEdge_Result_Success;
 }
 
 WasmEdge_Result HostSetComponent(void*, const WasmEdge_CallingFrameContext* frame,
-                                 const WasmEdge_Value* In, WasmEdge_Value* Out)
+                                 const WasmEdge_Value* in, WasmEdge_Value* out)
 {
-    uint64_t object_id = static_cast<uint64_t>(WasmEdge_ValueGetI64(In[0]));
-    uint32_t type = static_cast<uint32_t>(WasmEdge_ValueGetI32(In[1]));
-    uint32_t buf_ptr = static_cast<uint32_t>(WasmEdge_ValueGetI32(In[2]));
-    uint32_t len = static_cast<uint32_t>(WasmEdge_ValueGetI32(In[3]));
+    uint64_t object_id = static_cast<uint64_t>(WasmEdge_ValueGetI64(in[0]));
+    uint32_t type = static_cast<uint32_t>(WasmEdge_ValueGetI32(in[1]));
+    uint32_t buf_ptr = static_cast<uint32_t>(WasmEdge_ValueGetI32(in[2]));
+    uint32_t len = static_cast<uint32_t>(WasmEdge_ValueGetI32(in[3]));
 
     if (!g_host_ctx.storage) {
-        Out[0] = WasmEdge_ValueGenI32(0);
+        out[0] = WasmEdge_ValueGenI32(0);
         return WasmEdge_Result_Success;
     }
 
@@ -77,18 +78,18 @@ WasmEdge_Result HostSetComponent(void*, const WasmEdge_CallingFrameContext* fram
     if (len > 0) {
         WasmEdge_MemoryInstanceContext* memory = WasmEdge_CallingFrameGetMemoryInstance(frame, 0);
         if (!memory) {
-            Out[0] = WasmEdge_ValueGenI32(0);
+            out[0] = WasmEdge_ValueGenI32(0);
             return WasmEdge_Result_Success;
         }
         auto res = WasmEdge_MemoryInstanceGetData(memory, data.data(), buf_ptr, len);
         if (!WasmEdge_ResultOK(res)) {
-            Out[0] = WasmEdge_ValueGenI32(0);
+            out[0] = WasmEdge_ValueGenI32(0);
             return WasmEdge_Result_Success;
         }
     }
 
-    g_host_ctx.storage->Set(object_id, type, std::move(data));
-    Out[0] = WasmEdge_ValueGenI32(1);
+    g_host_ctx.storage->Write(object_id, type, std::move(data));
+    out[0] = WasmEdge_ValueGenI32(1);
     return WasmEdge_Result_Success;
 }
 
@@ -279,6 +280,15 @@ bool WasmEdgePlugin::Execute(GameObject& obj, const std::string& action,
     }
 
     return true;
+}
+
+std::unique_ptr<IPlugin> WasmEdgePlugin::Clone() const
+{
+    auto cloned = std::make_unique<WasmEdgePlugin>(path_, schema_version_);
+    if (!cloned->Initialize()) {
+        return nullptr;
+    }
+    return cloned;
 }
 
 std::unique_ptr<IPlugin> WasmEdgePluginFactory::Create(const std::string& path, uint32_t schema_version)

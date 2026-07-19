@@ -9,6 +9,7 @@ uint64_t MigrationEngine::MakeKey(uint32_t from, uint32_t to)
 
 void MigrationEngine::Register(uint32_t from_version, uint32_t to_version, MigrationFunc func)
 {
+    std::unique_lock lock(mutex_);
     migrations_[MakeKey(from_version, to_version)] = std::move(func);
 }
 
@@ -30,9 +31,14 @@ bool MigrationEngine::Migrate(GameObject& obj, uint32_t target_version)
 
 bool MigrationEngine::MigrateStep(GameObject& obj, uint32_t from, uint32_t to)
 {
-    auto it = migrations_.find(MakeKey(from, to));
-    if (it == migrations_.end()) return false;
-    return it->second(obj, from, to);
+    MigrationFunc func;
+    {
+        std::shared_lock lock(mutex_);
+        auto it = migrations_.find(MakeKey(from, to));
+        if (it == migrations_.end()) return false;
+        func = it->second;
+    }
+    return func(obj, from, to);
 }
 
 } // namespace wasmh

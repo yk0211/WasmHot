@@ -1,0 +1,20 @@
+#ifndef CITYHASH_CONFIG_H_
+#define CITYHASH_CONFIG_H_
+#define STDC_HEADERS 1
+#define HAVE_STDINT_H 1
+#define HAVE_STDLIB_H 1
+#define HAVE_SYS_TYPES_H 1
+#define HAVE_ENDIAN_H 1
+#define HAVE_BYTESWAP_H 1
+#define HAVE_SYS_MMAN_H 1
+#define HAVE_UNISTD_H 1
+#define HAVE_INTTYPES_H 1
+/* #undef WORDS_BIGENDIAN */
+#define HAVE_PEROR 1
+#define HAVE___INT128 1
+#define HAVE_DECL_BSWAP_64 1
+#define HAVE_DECL___BUILTIN_EXPECT 1
+#define HAVE_DECL___BUILTIN_CTZLL 1
+#define SIZEOF_VOID_P 8
+#define SIZEOF_LONG_INT 8
+#endif
