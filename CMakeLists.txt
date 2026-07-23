@@ -192,3 +192,46 @@ target_link_libraries(WasmHotLib PUBLIC cityhash dl pthread spdlog::spdlog yaml-
 
 add_executable(WasmHotServer src/main.cpp)
 target_link_libraries(WasmHotServer PRIVATE WasmHotLib)
+
+# -----------------------------------------------------------------------------
+# Build-type-specific compile and link options.
+# -----------------------------------------------------------------------------
+if(CMAKE_BUILD_TYPE STREQUAL "Debug")
+    message(STATUS "Debug build: enabling AddressSanitizer and GDB-friendly flags")
+    target_compile_options(WasmHotLib PUBLIC
+        -O0
+        -g3
+        -fsanitize=address
+        -fno-omit-frame-pointer
+  
+    )
+    target_link_options(WasmHotServer PRIVATE
+        -fsanitize=address
+    )
+elseif(CMAKE_BUILD_TYPE STREQUAL "RelWithDebInfo")
+    message(STATUS "RelWithDebInfo build: enabling optimizations with debug info and lld linker")
+    target_compile_options(WasmHotLib PUBLIC
+        -O2
+        -g
+        -fno-omit-frame-pointer
+    )
+    target_link_options(WasmHotServer PRIVATE
+        -fuse-ld=lld
+    )
+elseif(CMAKE_BUILD_TYPE STREQUAL "Release")
+    message(STATUS "Release build: enabling O3, ThinLTO, dead-code elimination and stack protection")
+    target_compile_options(WasmHotLib PUBLIC
+        -O3
+        -flto=thin
+        -ffunction-sections
+        -fdata-sections
+        -fno-omit-frame-pointer
+        -fstack-protector-strong
+    )
+    target_link_options(WasmHotServer PRIVATE
+        -flto=thin
+        -Wl,--gc-sections
+        -Wl,--icf=all
+        -Wl,-z,relro,-z,now
+    )
+endif()

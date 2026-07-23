@@ -1,19 +1,17 @@
 #pragma once
 
-namespace wasmh
-{
+namespace wasmh {
 
-class NonCopyable
-{
-public:
-    NonCopyable() = default;
-    NonCopyable(const NonCopyable&) = delete;
-    NonCopyable& operator=(const NonCopyable&) = delete;
-    NonCopyable(NonCopyable&&) = delete;
-    NonCopyable& operator=(NonCopyable&&) = delete;
+class NonCopyable {
+ public:
+  NonCopyable() = default;
+  NonCopyable(const NonCopyable&) = delete;
+  NonCopyable& operator=(const NonCopyable&) = delete;
+  NonCopyable(NonCopyable&&) = delete;
+  NonCopyable& operator=(NonCopyable&&) = delete;
 
-protected:
-    virtual ~NonCopyable() = default;
+ protected:
+  virtual ~NonCopyable() = default;
 };
 
-} // namespace wasmh
+}  // namespace wasmh

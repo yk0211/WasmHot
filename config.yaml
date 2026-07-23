@@ -14,7 +14,7 @@ thread_num: 4
 log_level: "info"
 
 # 日志大于等于此等级，立即写入文件
-flush_log_level: "warn"
+flush_log_level: "info"
 
 # 单个日志文件最大大小 (字节)
 max_file_size: 104857600

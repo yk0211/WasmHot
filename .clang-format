@@ -1,0 +1,71 @@
+---
+# Clang-Format configuration based on the Google C++ Style Guide.
+#
+# Usage:
+#   clang-format -i src/path/to/file.cpp
+#   find src -type f \( -name '*.cpp' -o -name '*.h' -o -name '*.cc' -o -name '*.hpp' \) -exec clang-format -i {} \;
+
+Language: Cpp
+BasedOnStyle: Google
+
+# Google defaults (explicit for clarity)
+IndentWidth: 2
+ColumnLimit: 80
+UseTab: Never
+
+AllowShortFunctionsOnASingleLine: Inline
+AllowShortIfStatementsOnASingleLine: false
+AllowShortLoopsOnASingleLine: false
+
+BreakBeforeBraces: Attach
+BraceWrapping:
+  AfterClass: false
+  AfterControlStatement: false
+  AfterEnum: false
+  AfterFunction: false
+  AfterNamespace: false
+  AfterStruct: false
+  AfterUnion: false
+  BeforeCatch: false
+  BeforeElse: false
+  IndentBraces: false
+
+DerivePointerAlignment: false
+PointerAlignment: Left
+ReferenceAlignment: Left
+
+SortIncludes: true
+IncludeBlocks: Regroup
+
+SpaceAfterCStyleCast: false
+SpaceAfterLogicalNot: false
+SpaceAfterTemplateKeyword: true
+SpaceBeforeAssignmentOperators: true
+SpaceBeforeCpp11BracedList: false
+SpaceBeforeCtorInitializerColon: true
+SpaceBeforeInheritanceColon: true
+SpaceBeforeParens: ControlStatements
+SpaceBeforeRangeBasedForLoopColon: true
+SpaceInEmptyParentheses: false
+SpacesInAngles: false
+SpacesInCStyleCastParentheses: false
+SpacesInParentheses: false
+SpacesInSquareBrackets: false
+
+AccessModifierOffset: -1
+AlignAfterOpenBracket: Align
+AlignConsecutiveAssignments: false
+AlignConsecutiveDeclarations: false
+AlignEscapedNewlines: Left
+AlignOperands: true
+AlignTrailingComments: true
+
+BinPackArguments: true
+BinPackParameters: true
+
+KeepEmptyLinesAtTheStartOfBlocks: false
+MaxEmptyLinesToKeep: 1
+
+Cpp11BracedListStyle: true
+NamespaceIndentation: None
+Standard: c++20
