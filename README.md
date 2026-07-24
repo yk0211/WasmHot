@@ -8,3 +8,6 @@ https://github.com/WebAssembly/wasi-sdk/releases
 选择合适的版本
 如果是Ubuntu可以直接下载deb二进制包，然后dpkg安装
 sudo dpkg -i wasi-sdk-33.0-x86_64-linux.deb
+
+3、安装工具包
+sudo apt install clang-tools-21

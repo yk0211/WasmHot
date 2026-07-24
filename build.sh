@@ -1,7 +1,7 @@
 #!/usr/bin/env bash
 # Local build script for WasmHot.
 #
-# Pipeline: clang-format -> cmake (Ninja) -> build -> clang-tidy
+# Pipeline: clang-format -> cmake -> build -> clang-tidy
 #
 # Debug builds enable AddressSanitizer and GDB-friendly flags (configured in
 # CMakeLists.txt). Release / RelWithDebInfo options are also configured there.
@@ -114,7 +114,6 @@ find_tool() {
 }
 
 CMAKE="$(find_tool cmake)"
-NINJA="$(find_tool ninja ninja-build)"
 
 if [[ $RUN_FORMAT -eq 1 ]]; then
     CLANG_FORMAT="$(find_tool clang-format clang-format-21 clang-format-20 clang-format-19 clang-format-18)"
@@ -152,11 +151,10 @@ if [[ $CLEAN -eq 1 ]]; then
     rm -rf "$BUILD_DIR"
 fi
 
-echo "==> Step 2/4: Configuring with CMake (Ninja, $BUILD_TYPE)..."
+echo "==> Step 2/4: Configuring with CMake ($BUILD_TYPE)..."
 CMAKE_ARGS=(
     -S "$PROJECT_ROOT"
     -B "$BUILD_DIR"
-    -G Ninja
     -DCMAKE_BUILD_TYPE="$BUILD_TYPE"
 )
 
