@@ -22,7 +22,7 @@ class ActorRuntime : public Singleton<ActorRuntime> {
 
   // Drives all actors: each actor schedules its pending messages (in order)
   // followed by its periodic Tick on the actor's private strand.
-  void Tick(uint64_t now_ms);
+  void Tick(uint64_t interval_ms);
 
   // Sends a message to the target actor by enqueueing it into its mailbox.
   // This is non-blocking and returns immediately; it is safe to call from

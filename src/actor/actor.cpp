@@ -32,10 +32,10 @@ void Actor::ProcessMessages() {
   }
 }
 
-void Actor::ScheduleTick(uint64_t now_ms) {
-  asio::post(strand_, [self = shared_from_this(), now_ms]() {
+void Actor::ScheduleTick(uint64_t interval_ms) {
+  asio::post(strand_, [self = shared_from_this(), interval_ms]() {
     self->ProcessMessages();
-    self->Tick(now_ms);
+    self->Tick(interval_ms);
   });
 }
 

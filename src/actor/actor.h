@@ -44,7 +44,7 @@ class Actor : public std::enable_shared_from_this<Actor> {
  protected:
   // Tick is called periodically by the runtime. It is the actor's
   // opportunity to perform scheduled work (e.g., timers, heartbeats).
-  virtual void Tick(uint64_t now_ms) = 0;
+  virtual void Tick(uint64_t interval_ms) = 0;
 
   // HandleMessage is invoked sequentially, one message at a time, by
   // ProcessMessages. Subclasses implement the actual message handling logic.

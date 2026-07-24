@@ -1,12 +1,17 @@
+#include <jemalloc/jemalloc.h>
 #include <spdlog/common.h>
+#include <unistd.h>
 #include <yaml-cpp/yaml.h>
 
 #include <CLI/CLI.hpp>
 #include <asio.hpp>
+#include <atomic>
 #include <chrono>
+#include <csignal>
 #include <cstdint>
 #include <cstdio>
 #include <filesystem>
+#include <format>
 #include <functional>
 #include <memory>
 #include <string>
@@ -21,8 +26,9 @@
 #include "core/module_manager.h"
 #include "core/object_registry.h"
 #include "core/schema_manager.h"
-#include "core/signal_handler.h"
 #include "plugin/wasmedge_plugin.h"
+
+const uint64_t g_interval_ms = 16ULL;
 
 struct ServerConfig {
   std::string server_name;
@@ -66,6 +72,58 @@ int32_t LoadServerConfig(const std::string& config_path, ServerConfig& server_co
   return 0;
 }
 
+void StartActorTickLoop(asio::io_context& io, uint64_t interval_ms) {
+  auto tick_timer = std::make_shared<asio::steady_timer>(io);
+  auto schedule_tick = std::make_shared<std::function<void(const asio::error_code&)>>();
+  *schedule_tick = [tick_timer, interval_ms, schedule_tick](const asio::error_code& ec) {
+    if (ec)
+      return;
+    wasmh::ActorRuntime::Instance()->Tick(interval_ms);
+    tick_timer->expires_after(std::chrono::milliseconds(interval_ms));
+    tick_timer->async_wait(*schedule_tick);
+  };
+  tick_timer->expires_after(std::chrono::milliseconds(interval_ms));
+  tick_timer->async_wait(*schedule_tick);
+}
+
+void DumpHeap() {
+  static std::atomic<int32_t> num{0};
+  const int32_t seq = num.fetch_add(1, std::memory_order_relaxed) + 1;
+  const int32_t pid = getpid();
+  const std::string filename = std::format("jeprof.{}.{}.heap", pid, seq);
+  const char* filename_str = filename.data();
+  const int32_t err = mallctl("prof.dump", nullptr, nullptr, (void*)&filename_str, sizeof(filename_str));
+  if (err != 0) {
+    ERROR("mallctl prof.dump failed, errno={}, filename={}", err, filename.data());
+    return;
+  }
+
+  INFO("Heap dump saved to {}", filename.data());
+}
+
+void StartSignalWait(const std::shared_ptr<asio::signal_set>& signals) {
+  signals->async_wait([signals](const asio::error_code& ec, int signal_number) {
+    if (ec) {
+      return;
+    }
+    if (signal_number == SIGUSR1) {
+      INFO("SIGUSR1 received, starting dump heap");
+      DumpHeap();
+    } else if (signal_number == SIGHUP) {
+      INFO("SIGHUP received, starting hot reload");
+      if (!wasmh::ModuleManager::Instance()->HotReloadAll()) {
+        WARN("Hot reload completed with failures");
+      }
+    }
+    StartSignalWait(signals);
+  });
+}
+
+void SetupSignalHandler(asio::io_context& io) {
+  auto signals = std::make_shared<asio::signal_set>(io, SIGUSR1, SIGHUP);
+  StartSignalWait(signals);
+}
+
 int32_t main(int32_t argc, char* argv[]) {
   try {
     std::string config_path;
@@ -83,10 +141,8 @@ int32_t main(int32_t argc, char* argv[]) {
     }
 
     wasmh::InitLogging(cfg.server_name, cfg.log_level, cfg.flush_log_level, cfg.max_file_size, cfg.max_rotate_file_num);
-    INFO(
-        "Init logging succeed, server_name={} log_level={} flush_log_level={} "
-        "max_file_size={} max_rotate_file_num={}",
-        cfg.server_name, cfg.log_level, cfg.flush_log_level, cfg.max_file_size, cfg.max_rotate_file_num);
+    INFO("Init logging succeed, server_name={} log_level={} flush_log_level={} max_file_size={} max_rotate_file_num={}",
+         cfg.server_name, cfg.log_level, cfg.flush_log_level, cfg.max_file_size, cfg.max_rotate_file_num);
 
     // Initialize singleton managers.
     wasmh::ModuleManager::Instance()->Initialize(std::make_unique<wasmh::WasmEdgePluginFactory>());
@@ -97,22 +153,8 @@ int32_t main(int32_t argc, char* argv[]) {
                          "Failed to init gateway");
     INFO("Init gateway succeed, ip={} port={}", cfg.listen_ip, cfg.listen_port);
 
-    // Keep the io_context alive and drive the actor runtime tick loop.
-    asio::steady_timer tick_timer(io);
-    std::function<void(const asio::error_code&)> schedule_tick = [&](const asio::error_code& ec) {
-      if (ec)
-        return;
-      const uint64_t now_ms = static_cast<uint64_t>(
-          std::chrono::duration_cast<std::chrono::milliseconds>(std::chrono::steady_clock::now().time_since_epoch())
-              .count());
-      wasmh::ActorRuntime::Instance()->Tick(now_ms);
-      tick_timer.expires_after(std::chrono::milliseconds(16));
-      tick_timer.async_wait(schedule_tick);
-    };
-    tick_timer.expires_after(std::chrono::milliseconds(16));
-    tick_timer.async_wait(schedule_tick);
-
-    wasmh::SetupSignalHandler(io);
+    StartActorTickLoop(io, g_interval_ms);
+    SetupSignalHandler(io);
 
     std::vector<std::thread> threads;
     threads.reserve(cfg.thread_num);

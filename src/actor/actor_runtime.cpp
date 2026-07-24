@@ -17,7 +17,7 @@ void ActorRuntime::Kill(uint64_t actor_id) {
   actors_.erase(actor_id);
 }
 
-void ActorRuntime::Tick(uint64_t now_ms) {
+void ActorRuntime::Tick(uint64_t interval_ms) {
   std::vector<std::shared_ptr<Actor>> snapshot;
   {
     std::shared_lock lock(actors_mutex_);
@@ -29,7 +29,7 @@ void ActorRuntime::Tick(uint64_t now_ms) {
   }
 
   for (auto& actor : snapshot) {
-    actor->ScheduleTick(now_ms);
+    actor->ScheduleTick(interval_ms);
   }
 }
 
