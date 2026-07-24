@@ -25,6 +25,7 @@ class ModuleManager : public Singleton<ModuleManager> {
 
   bool Load(const ModuleConfig& config);
   bool HotReload(const ModuleConfig& config);
+  bool HotReloadAll();
   void Rollback(const std::string& name);
   void Unload(const std::string& name);
   std::shared_ptr<IPlugin> Get(const std::string& name) const;

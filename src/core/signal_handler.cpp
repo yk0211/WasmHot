@@ -10,6 +10,7 @@
 #include <memory>
 
 #include "core/logging.h"
+#include "core/module_manager.h"
 
 namespace wasmh {
 
@@ -36,7 +37,13 @@ void StartSignalWait(const std::shared_ptr<asio::signal_set>& signals) {
       return;
     }
     if (signal_number == SIGUSR1) {
+      INFO("SIGUSR1 received, starting dump heap");
       DumpHeap();
+    } else if (signal_number == SIGHUP) {
+      INFO("SIGHUP received, starting hot reload");
+      if (!ModuleManager::Instance()->HotReloadAll()) {
+        WARN("Hot reload completed with failures");
+      }
     }
     StartSignalWait(signals);
   });
@@ -45,7 +52,7 @@ void StartSignalWait(const std::shared_ptr<asio::signal_set>& signals) {
 }  // namespace
 
 void SetupSignalHandler(asio::io_context& io) {
-  auto signals = std::make_shared<asio::signal_set>(io, SIGUSR1);
+  auto signals = std::make_shared<asio::signal_set>(io, SIGUSR1, SIGHUP);
   StartSignalWait(signals);
 }
 

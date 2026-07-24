@@ -1,6 +1,9 @@
 #include "core/module_manager.h"
 
 #include <mutex>
+#include <vector>
+
+#include "core/logging.h"
 
 namespace wasmh {
 
@@ -39,6 +42,27 @@ bool ModuleManager::HotReload(const ModuleConfig& config) {
   configs_[config.name] = config;
   schema_versions_[config.name] = config.schema_version;
   return true;
+}
+
+bool ModuleManager::HotReloadAll() {
+  std::vector<ModuleConfig> configs;
+  {
+    std::shared_lock lock(mutex_);
+    configs.reserve(configs_.size());
+    for (const auto& [name, config] : configs_) {
+      (void)name;
+      configs.push_back(config);
+    }
+  }
+
+  bool all_ok = true;
+  for (const auto& config : configs) {
+    if (!HotReload(config)) {
+      ERROR("HotReload failed for module {}", config.name);
+      all_ok = false;
+    }
+  }
+  return all_ok;
 }
 
 void ModuleManager::Rollback(const std::string& name) {
