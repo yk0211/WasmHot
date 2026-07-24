@@ -2,6 +2,7 @@
 
 #include <asio/post.hpp>
 
+#include "core/logging.h"
 #include "core/module_manager.h"
 #include "core/object.h"
 #include "core/object_registry.h"
@@ -13,7 +14,7 @@ Actor::Actor(asio::io_context& io) : strand_(asio::make_strand(io)) {}
 
 void Actor::EnqueueMessage(uint64_t sender_id,
                            const std::vector<uint8_t>& payload) {
-  std::lock_guard lock(mailbox_mutex_);
+  std::scoped_lock lock(mailbox_mutex_);
   const bool was_empty = mailbox_.empty();
   mailbox_.push_back({sender_id, payload});
   if (was_empty) {
@@ -25,7 +26,7 @@ void Actor::EnqueueMessage(uint64_t sender_id,
 void Actor::ProcessMessages() {
   std::deque<ActorMessage> local_messages;
   {
-    std::lock_guard lock(mailbox_mutex_);
+    std::scoped_lock lock(mailbox_mutex_);
     local_messages.swap(mailbox_);
   }
   for (const auto& msg : local_messages) {
@@ -72,7 +73,10 @@ void ActorWithObject::InvokeModule(const std::string& module_name,
         if (!plugin->Execute(*obj, action, input, output))
           return;
 
-        obj->ApplyOutputDelta(output);
+        if (!obj->ApplyOutputDelta(output)) {
+          WARN("Actor {} failed to apply output delta for action {}",
+               obj->header.object_id, action);
+        }
       });
 }
 

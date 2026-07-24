@@ -192,10 +192,18 @@ if [[ $RUN_TIDY -eq 1 ]]; then
         exit 1
     fi
 
+    TIDY_LOG="$BUILD_DIR/clang-tidy.log"
+    echo "clang-tidy warnings will be saved to: $TIDY_LOG"
+
     find "$PROJECT_ROOT/src" -type f \
         \( -name '*.cpp' -o -name '*.cc' -o -name '*.c' \) \
-        -print0 | xargs -0 "${CLANG_TIDY}" -p "$BUILD_DIR"
-    echo "clang-tidy done."
+        -print0 | xargs -0 "${CLANG_TIDY}" -p "$BUILD_DIR" 2>&1 | tee "$TIDY_LOG"
+
+    if grep -qE 'warning:|error:' "$TIDY_LOG"; then
+        echo "clang-tidy finished with warnings/errors (see $TIDY_LOG)."
+    else
+        echo "clang-tidy done."
+    fi
 else
     echo "==> Step 4/4: Skipping clang-tidy."
 fi

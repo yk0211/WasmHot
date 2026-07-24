@@ -9,7 +9,7 @@ namespace wasmh {
 
 class WasmEdgePlugin : public IPlugin {
  public:
-  WasmEdgePlugin(const std::string& path, uint32_t schema_version);
+  WasmEdgePlugin(std::string path, uint32_t schema_version);
   ~WasmEdgePlugin() override;
 
   bool Initialize() override;
@@ -17,9 +17,10 @@ class WasmEdgePlugin : public IPlugin {
   bool Execute(GameObject& obj, const std::string& action,
                const std::vector<uint8_t>& input,
                std::vector<uint8_t>& output) override;
-  std::unique_ptr<IPlugin> Clone() const override;
+  [[nodiscard]] std::unique_ptr<IPlugin> Clone() const override;
 
  private:
+  void ShutdownImpl();
   struct WasmEdgeState;
   std::unique_ptr<WasmEdgeState> state_;
   std::string path_;

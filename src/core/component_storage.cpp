@@ -3,7 +3,7 @@
 namespace wasmh {
 
 void ComponentStorage::Read(uint64_t object_id, ComponentType type,
-                            ReadCallback callback) const {
+                            const ReadCallback& callback) const {
   std::shared_lock map_lock(map_mutex_);
   auto it = store_.find(object_id);
   if (it == store_.end()) {
@@ -11,7 +11,7 @@ void ComponentStorage::Read(uint64_t object_id, ComponentType type,
     return;
   }
 
-  std::lock_guard obj_lock(it->second->mutex);
+  std::scoped_lock obj_lock(it->second->mutex);
   auto jt = it->second->components.find(type);
   callback(jt != it->second->components.end() ? &jt->second : nullptr);
 }
@@ -32,7 +32,7 @@ void ComponentStorage::Write(uint64_t object_id, ComponentType type,
     it = store_.find(object_id);
   }
 
-  std::lock_guard obj_lock(it->second->mutex);
+  std::scoped_lock obj_lock(it->second->mutex);
   it->second->components[type] = std::move(data);
 }
 
@@ -50,7 +50,7 @@ bool ComponentStorage::Remove(uint64_t object_id, ComponentType type) {
   if (it == store_.end())
     return false;
 
-  std::lock_guard obj_lock(it->second->mutex);
+  std::scoped_lock obj_lock(it->second->mutex);
   return it->second->components.erase(type) > 0;
 }
 
@@ -63,7 +63,7 @@ void ComponentStorage::RemoveAll(uint64_t object_id) {
   {
     // Synchronize with any thread currently operating on this object's
     // components before erasing the object.
-    std::lock_guard obj_lock(it->second->mutex);
+    std::scoped_lock obj_lock(it->second->mutex);
   }
   store_.erase(it);
 }

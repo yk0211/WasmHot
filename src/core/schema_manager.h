@@ -11,7 +11,7 @@
 
 namespace wasmh {
 
-enum class FieldType : uint32_t {
+enum class FieldType : uint8_t {
   Int32 = 1,
   Int64 = 2,
   Float = 3,
@@ -30,10 +30,10 @@ struct FieldDef {
 };
 
 struct Schema {
-  uint32_t version;
-  uint32_t object_type;
+  uint32_t version = 0;
+  uint32_t object_type = 0;
   std::vector<FieldDef> fields;
-  uint32_t total_size;
+  uint32_t total_size = 0;
 };
 
 // SchemaManager knows every object type and every supported schema version.

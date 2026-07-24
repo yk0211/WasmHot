@@ -30,7 +30,7 @@ class ObjectRegistry : public Singleton<ObjectRegistry> {
 
   // Invoke callback with a temporary GameObject view for the requested object.
   // If the object does not exist, callback(nullptr) is called.
-  void Get(uint64_t object_id, ObjectCallback callback) const;
+  void Get(uint64_t object_id, const ObjectCallback& callback) const;
 
   void Destroy(uint64_t object_id);
 
@@ -41,7 +41,7 @@ class ObjectRegistry : public Singleton<ObjectRegistry> {
 
   struct ObjectEntry {
     std::mutex mutex;
-    ObjectHeader header;
+    ObjectHeader header{};
   };
 
   ComponentStorage* storage_;

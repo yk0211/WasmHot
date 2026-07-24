@@ -11,8 +11,8 @@ namespace wasmh {
 // Configures spdlog with the project-wide format and rotation policy.
 // Format: [time][pid][tid][function:file:line] message
 // File:    <current_date>.log, rotating at 100MB with suffixes .1, .2, ...
-void InitLogging(const std::string& program_name, const std::string log_level,
-                 const std::string flush_log_level, std::size_t file_size,
+void InitLogging(const std::string& logger_name, const std::string& log_level,
+                 const std::string& flush_log_level, std::size_t file_size,
                  std::size_t rotate_file_num);
 
 }  // namespace wasmh

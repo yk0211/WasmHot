@@ -3,6 +3,9 @@
 #include <city.h>
 #include <wasmedge/wasmedge.h>
 
+#include <array>
+#include <utility>
+
 #include "core/component_storage.h"
 
 namespace {
@@ -25,12 +28,12 @@ WasmEdge_Result HostGetComponent(void*,
                                  const WasmEdge_CallingFrameContext* frame,
                                  const WasmEdge_Value* in,
                                  WasmEdge_Value* out) {
-  uint64_t object_id = static_cast<uint64_t>(WasmEdge_ValueGetI64(in[0]));
-  uint32_t type = static_cast<uint32_t>(WasmEdge_ValueGetI32(in[1]));
-  uint32_t buf_ptr = static_cast<uint32_t>(WasmEdge_ValueGetI32(in[2]));
-  uint32_t buf_cap = static_cast<uint32_t>(WasmEdge_ValueGetI32(in[3]));
+  auto object_id = static_cast<uint64_t>(WasmEdge_ValueGetI64(in[0]));
+  auto type = static_cast<uint32_t>(WasmEdge_ValueGetI32(in[1]));
+  auto buf_ptr = static_cast<uint32_t>(WasmEdge_ValueGetI32(in[2]));
+  auto buf_cap = static_cast<uint32_t>(WasmEdge_ValueGetI32(in[3]));
 
-  if (!g_host_ctx.storage) {
+  if (g_host_ctx.storage == nullptr) {
     out[0] = WasmEdge_ValueGenI32(-1);
     return WasmEdge_Result_Success;
   }
@@ -43,7 +46,7 @@ WasmEdge_Result HostGetComponent(void*,
           return;
         }
 
-        uint32_t len = static_cast<uint32_t>(data->size());
+        auto len = static_cast<uint32_t>(data->size());
         if (len > buf_cap) {
           out[0] = WasmEdge_ValueGenI32(-2);
           return;
@@ -73,12 +76,12 @@ WasmEdge_Result HostSetComponent(void*,
                                  const WasmEdge_CallingFrameContext* frame,
                                  const WasmEdge_Value* in,
                                  WasmEdge_Value* out) {
-  uint64_t object_id = static_cast<uint64_t>(WasmEdge_ValueGetI64(in[0]));
-  uint32_t type = static_cast<uint32_t>(WasmEdge_ValueGetI32(in[1]));
-  uint32_t buf_ptr = static_cast<uint32_t>(WasmEdge_ValueGetI32(in[2]));
-  uint32_t len = static_cast<uint32_t>(WasmEdge_ValueGetI32(in[3]));
+  auto object_id = static_cast<uint64_t>(WasmEdge_ValueGetI64(in[0]));
+  auto type = static_cast<uint32_t>(WasmEdge_ValueGetI32(in[1]));
+  auto buf_ptr = static_cast<uint32_t>(WasmEdge_ValueGetI32(in[2]));
+  auto len = static_cast<uint32_t>(WasmEdge_ValueGetI32(in[3]));
 
-  if (!g_host_ctx.storage) {
+  if (g_host_ctx.storage == nullptr) {
     out[0] = WasmEdge_ValueGenI32(0);
     return WasmEdge_Result_Success;
   }
@@ -87,7 +90,7 @@ WasmEdge_Result HostSetComponent(void*,
   if (len > 0) {
     WasmEdge_MemoryInstanceContext* memory =
         WasmEdge_CallingFrameGetMemoryInstance(frame, 0);
-    if (!memory) {
+    if (memory == nullptr) {
       out[0] = WasmEdge_ValueGenI32(0);
       return WasmEdge_Result_Success;
     }
@@ -108,11 +111,12 @@ WasmEdge_ModuleInstanceContext* CreateHostModule() {
   auto module_name = WasmEdge_StringCreateByCString("host");
   auto* module = WasmEdge_ModuleInstanceCreate(module_name);
   WasmEdge_StringDelete(module_name);
-  if (!module)
+  if (module == nullptr)
     return nullptr;
 
-  WasmEdge_ValType get_id_out[] = {WasmEdge_ValTypeGenI64()};
-  auto* get_id_type = WasmEdge_FunctionTypeCreate(nullptr, 0, get_id_out, 1);
+  std::array<WasmEdge_ValType, 1> get_id_out = {WasmEdge_ValTypeGenI64()};
+  auto* get_id_type =
+      WasmEdge_FunctionTypeCreate(nullptr, 0, get_id_out.data(), 1);
   auto* get_id_func = WasmEdge_FunctionInstanceCreate(
       get_id_type, HostGetCurrentObjectId, nullptr, 0);
   WasmEdge_FunctionTypeDelete(get_id_type);
@@ -120,12 +124,13 @@ WasmEdge_ModuleInstanceContext* CreateHostModule() {
   WasmEdge_ModuleInstanceAddFunction(module, get_id_name, get_id_func);
   WasmEdge_StringDelete(get_id_name);
 
-  WasmEdge_ValType comp_in[] = {
+  std::array<WasmEdge_ValType, 4> comp_in = {
       WasmEdge_ValTypeGenI64(), WasmEdge_ValTypeGenI32(),
       WasmEdge_ValTypeGenI32(), WasmEdge_ValTypeGenI32()};
-  WasmEdge_ValType comp_out[] = {WasmEdge_ValTypeGenI32()};
+  std::array<WasmEdge_ValType, 1> comp_out = {WasmEdge_ValTypeGenI32()};
 
-  auto* get_type = WasmEdge_FunctionTypeCreate(comp_in, 4, comp_out, 1);
+  auto* get_type =
+      WasmEdge_FunctionTypeCreate(comp_in.data(), 4, comp_out.data(), 1);
   auto* get_func =
       WasmEdge_FunctionInstanceCreate(get_type, HostGetComponent, nullptr, 0);
   WasmEdge_FunctionTypeDelete(get_type);
@@ -133,7 +138,8 @@ WasmEdge_ModuleInstanceContext* CreateHostModule() {
   WasmEdge_ModuleInstanceAddFunction(module, get_name, get_func);
   WasmEdge_StringDelete(get_name);
 
-  auto* set_type = WasmEdge_FunctionTypeCreate(comp_in, 4, comp_out, 1);
+  auto* set_type =
+      WasmEdge_FunctionTypeCreate(comp_in.data(), 4, comp_out.data(), 1);
   auto* set_func =
       WasmEdge_FunctionInstanceCreate(set_type, HostSetComponent, nullptr, 0);
   WasmEdge_FunctionTypeDelete(set_type);
@@ -154,11 +160,11 @@ struct WasmEdgePlugin::WasmEdgeState {
   WasmEdge_ModuleInstanceContext* host_module = nullptr;
 };
 
-WasmEdgePlugin::WasmEdgePlugin(const std::string& path, uint32_t schema_version)
-    : path_(path), schema_version_(schema_version) {}
+WasmEdgePlugin::WasmEdgePlugin(std::string path, uint32_t schema_version)
+    : path_(std::move(path)), schema_version_(schema_version) {}
 
 WasmEdgePlugin::~WasmEdgePlugin() {
-  Shutdown();
+  ShutdownImpl();
 }
 
 bool WasmEdgePlugin::Initialize() {
@@ -167,13 +173,13 @@ bool WasmEdgePlugin::Initialize() {
 
   state_ = std::make_unique<WasmEdgeState>();
   state_->vm = WasmEdge_VMCreate(nullptr, nullptr);
-  if (!state_->vm) {
+  if (state_->vm == nullptr) {
     state_.reset();
     return false;
   }
 
   state_->host_module = CreateHostModule();
-  if (!state_->host_module) {
+  if (state_->host_module == nullptr) {
     WasmEdge_VMDelete(state_->vm);
     state_.reset();
     return false;
@@ -211,8 +217,8 @@ bool WasmEdgePlugin::Initialize() {
     return false;
   }
 
-  auto* module = WasmEdge_VMGetActiveModule(state_->vm);
-  if (module) {
+  const auto* module = WasmEdge_VMGetActiveModule(state_->vm);
+  if (module != nullptr) {
     auto mem_name = WasmEdge_StringCreateByCString("memory");
     state_->memory = WasmEdge_ModuleInstanceFindMemory(module, mem_name);
     WasmEdge_StringDelete(mem_name);
@@ -223,12 +229,16 @@ bool WasmEdgePlugin::Initialize() {
 }
 
 void WasmEdgePlugin::Shutdown() {
-  if (state_) {
-    if (state_->vm) {
+  ShutdownImpl();
+}
+
+void WasmEdgePlugin::ShutdownImpl() {
+  if (state_ != nullptr) {
+    if (state_->vm != nullptr) {
       WasmEdge_VMDelete(state_->vm);
       state_->vm = nullptr;
     }
-    if (state_->host_module) {
+    if (state_->host_module != nullptr) {
       WasmEdge_ModuleInstanceDelete(state_->host_module);
       state_->host_module = nullptr;
     }
@@ -242,7 +252,7 @@ bool WasmEdgePlugin::Execute(GameObject& obj, const std::string& action,
                              std::vector<uint8_t>& output) {
   (void)schema_version_;
 
-  if (!initialized_ || !state_ || !state_->vm)
+  if (!initialized_ || state_ == nullptr || (state_->vm == nullptr))
     return false;
 
   g_host_ctx.storage = obj.storage;
@@ -252,7 +262,7 @@ bool WasmEdgePlugin::Execute(GameObject& obj, const std::string& action,
   const uint32_t output_offset = 4096;
   const uint32_t output_cap = 4096;
 
-  if (state_->memory && !input.empty()) {
+  if ((state_->memory != nullptr) && !input.empty()) {
     if (input.size() > output_offset)
       return false;
     auto res = WasmEdge_MemoryInstanceSetData(state_->memory, input.data(),
@@ -262,16 +272,17 @@ bool WasmEdgePlugin::Execute(GameObject& obj, const std::string& action,
   }
 
   auto func_name = WasmEdge_StringCreateByCString("execute");
-  int64_t action_hash =
+  auto action_hash =
       static_cast<int64_t>(CityHash64(action.data(), action.size()));
-  WasmEdge_Value params[5] = {
+  std::array<WasmEdge_Value, 5> params = {
       WasmEdge_ValueGenI64(action_hash),
       WasmEdge_ValueGenI32(static_cast<int32_t>(input_offset)),
       WasmEdge_ValueGenI32(static_cast<int32_t>(input.size())),
       WasmEdge_ValueGenI32(static_cast<int32_t>(output_offset)),
       WasmEdge_ValueGenI32(static_cast<int32_t>(output_cap))};
   WasmEdge_Value ret;
-  auto res = WasmEdge_VMExecute(state_->vm, func_name, params, 5, &ret, 1);
+  auto res =
+      WasmEdge_VMExecute(state_->vm, func_name, params.data(), 5, &ret, 1);
   WasmEdge_StringDelete(func_name);
 
   if (!WasmEdge_ResultOK(res))
@@ -282,10 +293,10 @@ bool WasmEdgePlugin::Execute(GameObject& obj, const std::string& action,
     return false;
 
   if (ret_len > 0) {
-    if (ret_len > static_cast<int32_t>(output_cap))
+    if (std::cmp_greater(ret_len, static_cast<int32_t>(output_cap)))
       return false;
     output.resize(ret_len);
-    if (state_->memory) {
+    if (state_->memory != nullptr) {
       auto res2 = WasmEdge_MemoryInstanceGetData(state_->memory, output.data(),
                                                  output_offset, ret_len);
       if (!WasmEdge_ResultOK(res2))

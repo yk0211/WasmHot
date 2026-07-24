@@ -1,5 +1,7 @@
 #include "core/schema_manager.h"
 
+#include <algorithm>
+
 namespace wasmh {
 
 void SchemaManager::RegisterSchema(const Schema& schema) {
@@ -27,8 +29,7 @@ std::optional<uint32_t> SchemaManager::GetLatestVersion(
   uint32_t latest = 0;
   for (const auto& [version, schema] : it->second) {
     (void)schema;
-    if (version > latest)
-      latest = version;
+    latest = std::max(version, latest);
   }
   return latest > 0 ? std::optional<uint32_t>(latest) : std::nullopt;
 }

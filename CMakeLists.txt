@@ -127,6 +127,7 @@ ExternalProject_Add(
     CONFIGURE_COMMAND <SOURCE_DIR>/configure --prefix=<INSTALL_DIR> --disable-shared --enable-static --disable-doc
     BUILD_COMMAND     ${MAKE_EXECUTABLE} -j4
     INSTALL_COMMAND   ${MAKE_EXECUTABLE} install
+    BUILD_BYPRODUCTS  ${JEMALLOC_INSTALL_DIR}/lib/libjemalloc.a
     BUILD_IN_SOURCE   1
     LOG_CONFIGURE 1
     LOG_BUILD     1
@@ -196,6 +197,19 @@ target_link_libraries(WasmHotServer PRIVATE WasmHotLib)
 # -----------------------------------------------------------------------------
 # Build-type-specific compile and link options.
 # -----------------------------------------------------------------------------
+find_program(LLD_LINKER NAMES lld lld-21 lld-20 lld-19 lld-18)
+find_program(GOLD_LINKER NAMES ld.gold gold)
+if(LLD_LINKER)
+    set(PREFERRED_LINKER "lld")
+    set(LINKER_FLAG "-fuse-ld=lld")
+elseif(GOLD_LINKER)
+    set(PREFERRED_LINKER "gold")
+    set(LINKER_FLAG "-fuse-ld=gold")
+else()
+    set(PREFERRED_LINKER "bfd")
+    set(LINKER_FLAG "")
+endif()
+
 if(CMAKE_BUILD_TYPE STREQUAL "Debug")
     message(STATUS "Debug build: enabling AddressSanitizer and GDB-friendly flags")
     target_compile_options(WasmHotLib PUBLIC
@@ -203,23 +217,25 @@ if(CMAKE_BUILD_TYPE STREQUAL "Debug")
         -g3
         -fsanitize=address
         -fno-omit-frame-pointer
-  
     )
     target_link_options(WasmHotServer PRIVATE
         -fsanitize=address
     )
 elseif(CMAKE_BUILD_TYPE STREQUAL "RelWithDebInfo")
-    message(STATUS "RelWithDebInfo build: enabling optimizations with debug info and lld linker")
+    message(STATUS "RelWithDebInfo build: enabling optimizations with debug info and ${PREFERRED_LINKER} linker")
     target_compile_options(WasmHotLib PUBLIC
         -O2
         -g
         -fno-omit-frame-pointer
     )
-    target_link_options(WasmHotServer PRIVATE
-        -fuse-ld=lld
-    )
+    if(LINKER_FLAG)
+        target_link_options(WasmHotServer PRIVATE ${LINKER_FLAG})
+    endif()
 elseif(CMAKE_BUILD_TYPE STREQUAL "Release")
-    message(STATUS "Release build: enabling O3, ThinLTO, dead-code elimination and stack protection")
+    if(NOT LINKER_FLAG)
+        message(FATAL_ERROR "Release build requires lld or gold linker for ThinLTO/ICF. Please install lld or gold.")
+    endif()
+    message(STATUS "Release build: enabling O3, ThinLTO, dead-code elimination, stack protection and ${PREFERRED_LINKER} linker")
     target_compile_options(WasmHotLib PUBLIC
         -O3
         -flto=thin
@@ -229,6 +245,7 @@ elseif(CMAKE_BUILD_TYPE STREQUAL "Release")
         -fstack-protector-strong
     )
     target_link_options(WasmHotServer PRIVATE
+        ${LINKER_FLAG}
         -flto=thin
         -Wl,--gc-sections
         -Wl,--icf=all

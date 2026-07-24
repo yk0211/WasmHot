@@ -1,13 +1,10 @@
 ---
-# Clang-Tidy configuration based on the Google C++ Style Guide.
+# Clang-Tidy configuration tuned for the WasmHot codebase.
+# Inspired by the Google C++ Style Guide but relaxed to match existing conventions.
 #
 # Usage:
-#   1. Manual run on project sources:
-#        cmake --build <build-dir> --target tidy
-#
-#   2. Enable checks during compilation:
-#        cmake -B build -DWASMHOT_ENABLE_CLANG_TIDY=ON
-#        cmake --build build
+#   ./build.sh
+#   cmake --build <build-dir> --target tidy
 
 Checks: >
   google-*,
@@ -18,17 +15,15 @@ Checks: >
   bugprone-*,
   clang-analyzer-*,
   portability-*,
-  -google-build-namespaces,
-  -google-readability-braces-around-statements,
-  -google-readability-casting,
-  -google-readability-function-size,
-  -google-readability-namespace-comments,
-  -google-readability-todo,
-  -google-runtime-int,
-  -google-runtime-references,
+  -bugprone-crtp-constructor-accessibility,
+  -bugprone-easily-swappable-parameters,
+  -bugprone-lambda-function-name,
+  -bugprone-unused-return-value,
+  -cppcoreguidelines-avoid-do-while,
   -cppcoreguidelines-avoid-magic-numbers,
   -cppcoreguidelines-avoid-non-const-global-variables,
   -cppcoreguidelines-macro-usage,
+  -cppcoreguidelines-non-private-member-variables-in-classes,
   -cppcoreguidelines-pro-bounds-array-to-pointer-decay,
   -cppcoreguidelines-pro-bounds-constant-array-index,
   -cppcoreguidelines-pro-bounds-pointer-arithmetic,
@@ -37,7 +32,17 @@ Checks: >
   -cppcoreguidelines-pro-type-union-access,
   -cppcoreguidelines-pro-type-vararg,
   -cppcoreguidelines-special-member-functions,
+  -cppcoreguidelines-virtual-class-destructor,
+  -google-build-namespaces,
+  -google-readability-braces-around-statements,
+  -google-readability-casting,
+  -google-readability-function-size,
+  -google-readability-namespace-comments,
+  -google-readability-todo,
+  -google-runtime-int,
+  -google-runtime-references,
   -modernize-use-trailing-return-type,
+  -portability-template-virtual-member-function,
   -modernize-use-using,
   -readability-braces-around-statements,
   -readability-else-after-return,
@@ -45,7 +50,9 @@ Checks: >
   -readability-identifier-length,
   -readability-magic-numbers,
   -readability-named-parameter,
-  -readability-redundant-access-specifiers
+  -readability-redundant-access-specifiers,
+  -portability-avoid-pragma-once,
+  -clang-analyzer-optin.cplusplus.UninitializedObject
 
 CheckOptions:
   # Google C++ identifier naming conventions.
@@ -53,28 +60,32 @@ CheckOptions:
     value: CamelCase
   - key:   readability-identifier-naming.ClassMemberCase
     value: lower_case
+  - key:   readability-identifier-naming.ClassMemberSuffix
+    value: _
   - key:   readability-identifier-naming.ClassMethodCase
-    value: lower_case
+    value: CamelCase
   - key:   readability-identifier-naming.ConstantCase
-    value: kCamelCase
+    value: lower_case
   - key:   readability-identifier-naming.ConstantMemberCase
-    value: kCamelCase
+    value: lower_case
   - key:   readability-identifier-naming.ConstantParameterCase
     value: lower_case
   - key:   readability-identifier-naming.ConstantPointerParameterCase
     value: lower_case
   - key:   readability-identifier-naming.ConstexprVariableCase
-    value: kCamelCase
+    value: lower_case
   - key:   readability-identifier-naming.EnumCase
     value: CamelCase
   - key:   readability-identifier-naming.EnumConstantCase
-    value: kCamelCase
+    value: CamelCase
   - key:   readability-identifier-naming.FunctionCase
-    value: lower_case
+    value: CamelCase
   - key:   readability-identifier-naming.GlobalConstantCase
-    value: kCamelCase
-  - key:   readability-identifier-naming.GlobalFunctionCase
     value: lower_case
+  - key:   readability-identifier-naming.GlobalConstantPrefix
+    value: g_
+  - key:   readability-identifier-naming.GlobalFunctionCase
+    value: CamelCase
   - key:   readability-identifier-naming.GlobalPointerCase
     value: lower_case
   - key:   readability-identifier-naming.GlobalVariableCase
@@ -94,7 +105,7 @@ CheckOptions:
   - key:   readability-identifier-naming.MemberCase
     value: lower_case
   - key:   readability-identifier-naming.MethodCase
-    value: lower_case
+    value: CamelCase
   - key:   readability-identifier-naming.NamespaceCase
     value: lower_case
   - key:   readability-identifier-naming.ParameterCase
@@ -108,21 +119,21 @@ CheckOptions:
   - key:   readability-identifier-naming.PrivateMemberSuffix
     value: _
   - key:   readability-identifier-naming.PrivateMethodCase
-    value: lower_case
+    value: CamelCase
   - key:   readability-identifier-naming.ProtectedMemberCase
     value: lower_case
   - key:   readability-identifier-naming.ProtectedMemberSuffix
     value: _
   - key:   readability-identifier-naming.ProtectedMethodCase
-    value: lower_case
+    value: CamelCase
   - key:   readability-identifier-naming.PublicMemberCase
     value: lower_case
   - key:   readability-identifier-naming.PublicMethodCase
-    value: lower_case
+    value: CamelCase
   - key:   readability-identifier-naming.ScopedEnumConstantCase
-    value: kCamelCase
+    value: CamelCase
   - key:   readability-identifier-naming.StaticConstantCase
-    value: kCamelCase
+    value: lower_case
   - key:   readability-identifier-naming.StaticVariableCase
     value: lower_case
   - key:   readability-identifier-naming.StructCase
@@ -144,8 +155,9 @@ CheckOptions:
   - key:   readability-identifier-naming.VariableCase
     value: lower_case
   - key:   readability-identifier-naming.VirtualMethodCase
-    value: lower_case
+    value: CamelCase
 
-HeaderFilterRegex: 'src/.*'
+HeaderFilterRegex: '/WasmHot/src/.*'
+ExcludeHeaderFilterRegex: '.*_deps.*'
 
 WarningsAsErrors: ''

@@ -40,7 +40,6 @@ class Gateway::Session : public std::enable_shared_from_this<Session> {
                          return;
                        }
                        if (self->length_ < sizeof(uint32_t)) {
-                         WARN("Gateway message too short");
                          self->gateway_->OnSessionClosed(self->session_id_);
                          return;
                        }
@@ -74,7 +73,7 @@ class Gateway::Session : public std::enable_shared_from_this<Session> {
 
     std::vector<uint8_t> framed;
     framed.reserve(sizeof(uint32_t) + msg.size());
-    const uint32_t len = static_cast<uint32_t>(msg.size());
+    const auto len = static_cast<uint32_t>(msg.size());
     framed.resize(sizeof(uint32_t));
     std::memcpy(framed.data(), &len, sizeof(uint32_t));
     framed.insert(framed.end(), msg.begin(), msg.end());
@@ -93,7 +92,7 @@ class Gateway::Session : public std::enable_shared_from_this<Session> {
 
   void HandleError(const asio::error_code& ec, const char* op) {
     if (ec != asio::error::eof && ec != asio::error::operation_aborted) {
-      SPDLOG_WARN("Gateway {} error: {}", op, ec.message());
+      WARN("Gateway {} error: {}", op, ec.message());
     }
     gateway_->OnSessionClosed(session_id_);
   }
@@ -122,7 +121,7 @@ int32_t Gateway::Initialize(asio::io_context& io, const std::string& ip,
   acceptor_->open(address.is_v6() ? asio::ip::tcp::v6() : asio::ip::tcp::v4(),
                   ec);
   if (!ec && address.is_v6()) {
-    acceptor_->set_option(asio::ip::v6_only(false), ec);
+    (void)acceptor_->set_option(asio::ip::v6_only(false), ec);
     if (ec) {
       WARN("Failed to disable IPV6_V6ONLY: {}", ec.message());
     }

@@ -12,7 +12,7 @@ namespace wasmh {
 struct ModuleConfig {
   std::string name;
   std::string path;
-  uint32_t schema_version;
+  uint32_t schema_version{};
 };
 
 // ModuleManager owns loaded logic modules. It is the hot-update entry point:

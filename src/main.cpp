@@ -23,16 +23,14 @@
 #include "core/schema_manager.h"
 #include "plugin/wasmedge_plugin.h"
 
-using namespace wasmh;
-
 struct ServerConfig {
-  std::string server_name = "";
+  std::string server_name;
   std::string listen_ip = "127.0.0.1";
   uint16_t listen_port = 8080;
   std::size_t thread_num = 1;
   std::string log_level = "info";
   std::string flush_log_level = "warn";
-  std::size_t max_file_size = 100 * 1024 * 1024;
+  std::size_t max_file_size = 100ULL * 1024 * 1024;
   std::size_t max_rotate_file_num = 10;
 };
 
@@ -72,64 +70,72 @@ int32_t LoadServerConfig(const std::string& config_path,
 }
 
 int32_t main(int32_t argc, char* argv[]) {
-  std::string config_path;
+  try {
+    std::string config_path;
 
-  CLI::App app;
-  app.add_option("--config", config_path,
-                 "Path to configuration file (yaml/yml)")
-      ->required()
-      ->check(CLI::ExistingFile);
-  CLI11_PARSE(app, argc, argv);
+    CLI::App app;
+    app.add_option("--config", config_path,
+                   "Path to configuration file (yaml/yml)")
+        ->required()
+        ->check(CLI::ExistingFile);
+    CLI11_PARSE(app, argc, argv);
 
-  ServerConfig cfg;
-  if (LoadServerConfig(config_path, cfg) != 0) {
-    std::fprintf(stderr, "Failed to load config: %s\n", config_path.c_str());
+    ServerConfig cfg;
+    if (LoadServerConfig(config_path, cfg) != 0) {
+      std::fprintf(stderr, "Failed to load config: %s\n", config_path.c_str());
+      return -1;
+    }
+
+    wasmh::InitLogging(cfg.server_name, cfg.log_level, cfg.flush_log_level,
+                       cfg.max_file_size, cfg.max_rotate_file_num);
+    INFO(
+        "Init logging succeed, server_name={} log_level={} flush_log_level={} "
+        "max_file_size={} max_rotate_file_num={}",
+        cfg.server_name, cfg.log_level, cfg.flush_log_level, cfg.max_file_size,
+        cfg.max_rotate_file_num);
+
+    // Initialize singleton managers.
+    wasmh::ModuleManager::Instance()->Initialize(
+        std::make_unique<wasmh::WasmEdgePluginFactory>());
+
+    asio::io_context io(static_cast<int>(cfg.thread_num));
+    wasmh::ActorRuntime::Instance()->Initialize(io);
+    CHECK_WITH_ERROR_LOG(wasmh::Gateway::Instance()->Initialize(
+                             io, cfg.listen_ip, cfg.listen_port) == 0,
+                         "Failed to init gateway");
+    INFO("Init gateway succeed, ip={} port={}", cfg.listen_ip, cfg.listen_port);
+
+    // Keep the io_context alive and drive the actor runtime tick loop.
+    asio::steady_timer tick_timer(io);
+    std::function<void(const asio::error_code&)> schedule_tick =
+        [&](const asio::error_code& ec) {
+          if (ec)
+            return;
+          const uint64_t now_ms = static_cast<uint64_t>(
+              std::chrono::duration_cast<std::chrono::milliseconds>(
+                  std::chrono::steady_clock::now().time_since_epoch())
+                  .count());
+          wasmh::ActorRuntime::Instance()->Tick(now_ms);
+          tick_timer.expires_after(std::chrono::milliseconds(16));
+          tick_timer.async_wait(schedule_tick);
+        };
+    tick_timer.expires_after(std::chrono::milliseconds(16));
+    tick_timer.async_wait(schedule_tick);
+
+    std::vector<std::thread> threads;
+    threads.reserve(cfg.thread_num);
+    for (size_t i = 0; i < cfg.thread_num; ++i) {
+      threads.emplace_back([&io]() { io.run(); });
+    }
+    for (auto& t : threads) {
+      t.join();
+    }
+  } catch (const std::exception& e) {
+    std::fprintf(stderr, "Fatal error: %s\n", e.what());
     return -1;
-  }
-
-  InitLogging(cfg.server_name, cfg.log_level, cfg.flush_log_level,
-              cfg.max_file_size, cfg.max_rotate_file_num);
-  INFO(
-      "Init logging succeed, server_name={} log_level={} flush_log_level={} "
-      "max_file_size={} max_rotate_file_num={}",
-      cfg.server_name, cfg.log_level, cfg.flush_log_level, cfg.max_file_size,
-      cfg.max_rotate_file_num);
-
-  // Initialize singleton managers.
-  ModuleManager::Instance()->Initialize(
-      std::make_unique<WasmEdgePluginFactory>());
-
-  asio::io_context io(cfg.thread_num);
-  ActorRuntime::Instance()->Initialize(io);
-  CHECK_WITH_ERROR_LOG(
-      Gateway::Instance()->Initialize(io, cfg.listen_ip, cfg.listen_port) == 0,
-      "Failed to init gateway");
-  INFO("Init gateway succeed, ip={} port={}", cfg.listen_ip, cfg.listen_port);
-
-  // Keep the io_context alive and drive the actor runtime tick loop.
-  asio::steady_timer tick_timer(io);
-  std::function<void(const asio::error_code&)> schedule_tick =
-      [&](const asio::error_code& ec) {
-        if (ec)
-          return;
-        const uint64_t now_ms = static_cast<uint64_t>(
-            std::chrono::duration_cast<std::chrono::milliseconds>(
-                std::chrono::steady_clock::now().time_since_epoch())
-                .count());
-        ActorRuntime::Instance()->Tick(now_ms);
-        tick_timer.expires_after(std::chrono::milliseconds(16));
-        tick_timer.async_wait(schedule_tick);
-      };
-  tick_timer.expires_after(std::chrono::milliseconds(16));
-  tick_timer.async_wait(schedule_tick);
-
-  std::vector<std::thread> threads;
-  threads.reserve(cfg.thread_num);
-  for (size_t i = 0; i < cfg.thread_num; ++i) {
-    threads.emplace_back([&io]() { io.run(); });
-  }
-  for (auto& t : threads) {
-    t.join();
+  } catch (...) {
+    std::fprintf(stderr, "Fatal error: unknown exception\n");
+    return -1;
   }
 
   return 0;

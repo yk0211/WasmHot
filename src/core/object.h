@@ -26,7 +26,7 @@ class GameObject {
  public:
   using ReadComponentCallback = std::function<void(const ComponentData*)>;
 
-  ObjectHeader header;
+  ObjectHeader header{};
   ComponentStorage* storage = nullptr;
 
   GameObject() = default;
@@ -34,16 +34,16 @@ class GameObject {
 
   // Read the component under its object lock. The pointer is valid only for
   // the duration of the callback.
-  void ReadComponent(ComponentType type, ReadComponentCallback callback);
-  void ReadComponent(ComponentType type, ReadComponentCallback callback) const;
+  void ReadComponent(ComponentType type,
+                     const ReadComponentCallback& callback) const;
 
   // Replace the component under its object lock.
-  void WriteComponent(ComponentType type, ComponentData data);
-  bool WriteComponent(ComponentType type, const Schema& schema,
-                      ComponentData data);
+  void WriteComponent(ComponentType type, ComponentData data) const;
+  [[nodiscard]] bool WriteComponent(ComponentType type, const Schema& schema,
+                                    ComponentData data) const;
 
-  bool RemoveComponent(ComponentType type);
-  bool ApplyOutputDelta(const std::vector<uint8_t>& output);
+  [[nodiscard]] bool RemoveComponent(ComponentType type) const;
+  [[nodiscard]] bool ApplyOutputDelta(const std::vector<uint8_t>& output) const;
 };
 
 }  // namespace wasmh

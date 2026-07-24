@@ -15,7 +15,8 @@ uint64_t ObjectRegistry::Create(const ObjectHeader& header) {
   return header.object_id;
 }
 
-void ObjectRegistry::Get(uint64_t object_id, ObjectCallback callback) const {
+void ObjectRegistry::Get(uint64_t object_id,
+                         const ObjectCallback& callback) const {
   std::shared_lock lock(map_mutex_);
   auto it = objects_.find(object_id);
   if (it == objects_.end()) {
@@ -23,9 +24,9 @@ void ObjectRegistry::Get(uint64_t object_id, ObjectCallback callback) const {
     return;
   }
 
-  ObjectHeader header;
+  ObjectHeader header{};
   {
-    std::lock_guard obj_lock(it->second->mutex);
+    std::scoped_lock obj_lock(it->second->mutex);
     header = it->second->header;
   }
   lock.unlock();
@@ -44,12 +45,12 @@ void ObjectRegistry::Destroy(uint64_t object_id) {
     {
       // Synchronize with any thread currently using this object view
       // before erasing the entry.
-      std::lock_guard obj_lock(it->second->mutex);
+      std::scoped_lock obj_lock(it->second->mutex);
     }
     objects_.erase(it);
   }
 
-  if (storage_) {
+  if (storage_ != nullptr) {
     storage_->RemoveAll(object_id);
   }
 }
@@ -60,7 +61,7 @@ bool ObjectRegistry::Migrate(uint64_t object_id, uint32_t target_version) {
   if (it == objects_.end())
     return false;
 
-  std::lock_guard obj_lock(it->second->mutex);
+  std::scoped_lock obj_lock(it->second->mutex);
   GameObject view(it->second->header, storage_);
   bool ok = MigrationEngine::Instance()->Migrate(view, target_version);
   if (ok) {

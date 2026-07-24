@@ -25,7 +25,7 @@ class ComponentStorage : public Singleton<ComponentStorage> {
   // Read the component under its object lock. The pointer is valid only for
   // the duration of the callback.
   void Read(uint64_t object_id, ComponentType type,
-            ReadCallback callback) const;
+            const ReadCallback& callback) const;
 
   // Replace the component under its object lock.
   void Write(uint64_t object_id, ComponentType type, ComponentData data);

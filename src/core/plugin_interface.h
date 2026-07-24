@@ -22,7 +22,7 @@ class IPlugin {
 
   // Create an independent, initialized copy of this plugin instance.
   // Each actor receives its own clone so that no runtime state is shared.
-  virtual std::unique_ptr<IPlugin> Clone() const = 0;
+  [[nodiscard]] virtual std::unique_ptr<IPlugin> Clone() const = 0;
 };
 
 // PluginFactory creates plugin instances based on their backend.

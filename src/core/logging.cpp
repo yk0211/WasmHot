@@ -17,7 +17,7 @@
 
 namespace wasmh {
 
-constexpr std::size_t g_min_file_size = 100 * 1024 * 1024;
+constexpr std::size_t g_min_file_size = 100ULL * 1024 * 1024;
 const std::size_t g_max_file_num = 1000;
 
 static void AtExitFlush() {
@@ -35,9 +35,9 @@ static std::string GetLogFilename() {
 
 class DateRotatingFileSink : public spdlog::sinks::base_sink<std::mutex> {
  public:
-  DateRotatingFileSink(const std::string& base_filename, std::size_t max_size,
+  DateRotatingFileSink(std::string base_filename, std::size_t max_size,
                        std::size_t max_files)
-      : base_filename_(base_filename),
+      : base_filename_(std::move(base_filename)),
         max_size_(std::max(max_size, g_min_file_size)),
         max_files_(std::min(max_files, g_max_file_num)) {
     file_helper_.open(base_filename_);
@@ -107,8 +107,8 @@ class DateRotatingFileSink : public spdlog::sinks::base_sink<std::mutex> {
   spdlog::details::file_helper file_helper_;
 };
 
-void InitLogging(const std::string& logger_name, const std::string log_level,
-                 const std::string flush_log_level, std::size_t file_size,
+void InitLogging(const std::string& logger_name, const std::string& log_level,
+                 const std::string& flush_log_level, std::size_t file_size,
                  std::size_t rotate_file_num) {
   std::string filename = GetLogFilename();
   auto file_sink = std::make_shared<DateRotatingFileSink>(filename, file_size,
