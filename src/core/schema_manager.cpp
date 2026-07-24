@@ -9,8 +9,7 @@ void SchemaManager::RegisterSchema(const Schema& schema) {
   schemas_[schema.object_type][schema.version] = schema;
 }
 
-const Schema* SchemaManager::GetSchema(uint32_t object_type,
-                                       uint32_t version) const {
+const Schema* SchemaManager::GetSchema(uint32_t object_type, uint32_t version) const {
   std::shared_lock lock(mutex_);
   auto it = schemas_.find(object_type);
   if (it == schemas_.end())
@@ -19,8 +18,7 @@ const Schema* SchemaManager::GetSchema(uint32_t object_type,
   return jt != it->second.end() ? &jt->second : nullptr;
 }
 
-std::optional<uint32_t> SchemaManager::GetLatestVersion(
-    uint32_t object_type) const {
+std::optional<uint32_t> SchemaManager::GetLatestVersion(uint32_t object_type) const {
   std::shared_lock lock(mutex_);
   auto it = schemas_.find(object_type);
   if (it == schemas_.end())

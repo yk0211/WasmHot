@@ -16,8 +16,7 @@ class IPlugin {
   virtual ~IPlugin() = default;
   virtual bool Initialize() = 0;
   virtual void Shutdown() = 0;
-  virtual bool Execute(GameObject& obj, const std::string& action,
-                       const std::vector<uint8_t>& input,
+  virtual bool Execute(GameObject& obj, const std::string& action, const std::vector<uint8_t>& input,
                        std::vector<uint8_t>& output) = 0;
 
   // Create an independent, initialized copy of this plugin instance.
@@ -29,8 +28,7 @@ class IPlugin {
 class PluginFactory {
  public:
   virtual ~PluginFactory() = default;
-  virtual std::unique_ptr<IPlugin> Create(const std::string& path,
-                                          uint32_t schema_version) = 0;
+  virtual std::unique_ptr<IPlugin> Create(const std::string& path, uint32_t schema_version) = 0;
 };
 
 }  // namespace wasmh

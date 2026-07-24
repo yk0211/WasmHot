@@ -11,9 +11,8 @@ namespace wasmh {
 // Configures spdlog with the project-wide format and rotation policy.
 // Format: [time][pid][tid][function:file:line] message
 // File:    <current_date>.log, rotating at 100MB with suffixes .1, .2, ...
-void InitLogging(const std::string& logger_name, const std::string& log_level,
-                 const std::string& flush_log_level, std::size_t file_size,
-                 std::size_t rotate_file_num);
+void InitLogging(const std::string& logger_name, const std::string& log_level, const std::string& flush_log_level,
+                 std::size_t file_size, std::size_t rotate_file_num);
 
 }  // namespace wasmh
 
@@ -32,50 +31,42 @@ void InitLogging(const std::string& logger_name, const std::string& log_level,
 #define LOG_DETAIL_UNIQUE_NAME(prefix) LOG_DETAIL_CONCAT(prefix, __LINE__)
 
 // Log once every N invocations.
-#define LOG_EVERY_N(level, n, ...)                                           \
-  do {                                                                       \
-    static std::atomic<int64_t> LOG_DETAIL_UNIQUE_NAME(log_every_n_counter){ \
-        0};                                                                  \
-    auto count = LOG_DETAIL_UNIQUE_NAME(log_every_n_counter)                 \
-                     .fetch_add(1, std::memory_order_relaxed);               \
-    if ((count % (n)) == 0) {                                                \
-      level(__VA_ARGS__);                                                    \
-    }                                                                        \
+#define LOG_EVERY_N(level, n, ...)                                                                    \
+  do {                                                                                                \
+    static std::atomic<int64_t> LOG_DETAIL_UNIQUE_NAME(log_every_n_counter){0};                       \
+    auto count = LOG_DETAIL_UNIQUE_NAME(log_every_n_counter).fetch_add(1, std::memory_order_relaxed); \
+    if ((count % (n)) == 0) {                                                                         \
+      level(__VA_ARGS__);                                                                             \
+    }                                                                                                 \
   } while (0)
 
 // Log only for the first N invocations.
-#define LOG_FIRST_N(level, n, ...)                                           \
-  do {                                                                       \
-    static std::atomic<int64_t> LOG_DETAIL_UNIQUE_NAME(log_first_n_counter){ \
-        0};                                                                  \
-    auto count = LOG_DETAIL_UNIQUE_NAME(log_first_n_counter)                 \
-                     .fetch_add(1, std::memory_order_relaxed);               \
-    if (count < (n)) {                                                       \
-      level(__VA_ARGS__);                                                    \
-    }                                                                        \
+#define LOG_FIRST_N(level, n, ...)                                                                    \
+  do {                                                                                                \
+    static std::atomic<int64_t> LOG_DETAIL_UNIQUE_NAME(log_first_n_counter){0};                       \
+    auto count = LOG_DETAIL_UNIQUE_NAME(log_first_n_counter).fetch_add(1, std::memory_order_relaxed); \
+    if (count < (n)) {                                                                                \
+      level(__VA_ARGS__);                                                                             \
+    }                                                                                                 \
   } while (0)
 
 // Log at most once every N milliseconds.
-#define LOG_EVERY_MS(level, ms, ...)                                          \
-  do {                                                                        \
-    static std::atomic<int64_t> LOG_DETAIL_UNIQUE_NAME(log_every_ms_last){0}; \
-    auto now_ms = static_cast<int64_t>(                                       \
-        std::chrono::duration_cast<std::chrono::milliseconds>(                \
-            std::chrono::steady_clock::now().time_since_epoch())              \
-            .count());                                                        \
-    int64_t last = LOG_DETAIL_UNIQUE_NAME(log_every_ms_last)                  \
-                       .load(std::memory_order_relaxed);                      \
-    if (now_ms - last >= (ms) &&                                              \
-        LOG_DETAIL_UNIQUE_NAME(log_every_ms_last)                             \
-            .compare_exchange_weak(last, now_ms, std::memory_order_relaxed,   \
-                                   std::memory_order_relaxed)) {              \
-      level(__VA_ARGS__);                                                     \
-    }                                                                         \
+#define LOG_EVERY_MS(level, ms, ...)                                                                               \
+  do {                                                                                                             \
+    static std::atomic<int64_t> LOG_DETAIL_UNIQUE_NAME(log_every_ms_last){0};                                      \
+    auto now_ms = static_cast<int64_t>(                                                                            \
+        std::chrono::duration_cast<std::chrono::milliseconds>(std::chrono::steady_clock::now().time_since_epoch()) \
+            .count());                                                                                             \
+    int64_t last = LOG_DETAIL_UNIQUE_NAME(log_every_ms_last).load(std::memory_order_relaxed);                      \
+    if (now_ms - last >= (ms) &&                                                                                   \
+        LOG_DETAIL_UNIQUE_NAME(log_every_ms_last)                                                                  \
+            .compare_exchange_weak(last, now_ms, std::memory_order_relaxed, std::memory_order_relaxed)) {          \
+      level(__VA_ARGS__);                                                                                          \
+    }                                                                                                              \
   } while (0)
 
 // Log at most once every N seconds.
-#define LOG_EVERY_SEC(level, sec, ...) \
-  LOG_EVERY_MS(level, (sec) * 1000, __VA_ARGS__)
+#define LOG_EVERY_SEC(level, sec, ...) LOG_EVERY_MS(level, (sec) * 1000, __VA_ARGS__)
 
 // Log only once.
 #define LOG_ONCE(level, ...) LOG_FIRST_N(level, 1, __VA_ARGS__)

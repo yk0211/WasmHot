@@ -27,8 +27,7 @@ class ActorRuntime : public Singleton<ActorRuntime> {
   // Sends a message to the target actor by enqueueing it into its mailbox.
   // This is non-blocking and returns immediately; it is safe to call from
   // any thread (e.g., the network I/O thread).
-  void SendMessage(uint64_t from_id, uint64_t to_id,
-                   const std::vector<uint8_t>& payload);
+  void SendMessage(uint64_t from_id, uint64_t to_id, const std::vector<uint8_t>& payload);
 
   asio::io_context* GetIoContext() const { return io_; }
 

@@ -48,8 +48,7 @@ class Actor : public std::enable_shared_from_this<Actor> {
 
   // HandleMessage is invoked sequentially, one message at a time, by
   // ProcessMessages. Subclasses implement the actual message handling logic.
-  virtual void HandleMessage(uint64_t sender_id,
-                             const std::vector<uint8_t>& payload) = 0;
+  virtual void HandleMessage(uint64_t sender_id, const std::vector<uint8_t>& payload) = 0;
 
   asio::strand<asio::io_context::executor_type> strand_;
 
@@ -67,11 +66,9 @@ class Actor : public std::enable_shared_from_this<Actor> {
 // ObjectRegistry on demand.
 class ActorWithObject : public Actor {
  protected:
-  ActorWithObject(asio::io_context& io, uint64_t object_id,
-                  const std::vector<std::string>& module_names);
+  ActorWithObject(asio::io_context& io, uint64_t object_id, const std::vector<std::string>& module_names);
 
-  void InvokeModule(const std::string& module_name, const std::string& action,
-                    const std::vector<uint8_t>& input);
+  void InvokeModule(const std::string& module_name, const std::string& action, const std::vector<uint8_t>& input);
 
   uint64_t object_id_ = 0;
   std::unordered_map<std::string, std::shared_ptr<IPlugin>> plugins_;

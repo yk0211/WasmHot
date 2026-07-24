@@ -12,8 +12,7 @@ namespace wasmh {
 // MigrationFunc rewrites a GameObject's components from one schema version to
 // another. It must be pure data transformation: no side effects, no business
 // logic.
-using MigrationFunc = std::function<bool(GameObject& obj, uint32_t from_version,
-                                         uint32_t to_version)>;
+using MigrationFunc = std::function<bool(GameObject& obj, uint32_t from_version, uint32_t to_version)>;
 
 class MigrationEngine : public Singleton<MigrationEngine> {
   friend class Singleton<MigrationEngine>;

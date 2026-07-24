@@ -50,16 +50,14 @@ class Gateway::Session : public std::enable_shared_from_this<Session> {
 
   void DoReadBody() {
     auto self = shared_from_this();
-    asio::async_read(socket_, asio::buffer(body_buf_),
-                     [self](const asio::error_code& ec, std::size_t /*bytes*/) {
-                       if (ec) {
-                         self->HandleError(ec, "read");
-                         return;
-                       }
-                       self->gateway_->OnReceive(self->session_id_, 0,
-                                                 self->body_buf_);
-                       self->DoReadHeader();
-                     });
+    asio::async_read(socket_, asio::buffer(body_buf_), [self](const asio::error_code& ec, std::size_t /*bytes*/) {
+      if (ec) {
+        self->HandleError(ec, "read");
+        return;
+      }
+      self->gateway_->OnReceive(self->session_id_, 0, self->body_buf_);
+      self->DoReadHeader();
+    });
   }
 
   void DoWrite() {
@@ -80,8 +78,7 @@ class Gateway::Session : public std::enable_shared_from_this<Session> {
 
     auto self = shared_from_this();
     asio::async_write(socket_, asio::buffer(framed),
-                      [self, framed = std::move(framed)](
-                          const asio::error_code& ec, std::size_t /*bytes*/) {
+                      [self, framed = std::move(framed)](const asio::error_code& ec, std::size_t /*bytes*/) {
                         if (ec) {
                           self->HandleError(ec, "write");
                           return;
@@ -106,8 +103,7 @@ class Gateway::Session : public std::enable_shared_from_this<Session> {
   bool send_in_progress_ = false;
 };
 
-int32_t Gateway::Initialize(asio::io_context& io, const std::string& ip,
-                            uint16_t port) {
+int32_t Gateway::Initialize(asio::io_context& io, const std::string& ip, uint16_t port) {
   io_ = &io;
 
   asio::error_code ec;
@@ -118,8 +114,7 @@ int32_t Gateway::Initialize(asio::io_context& io, const std::string& ip,
   }
 
   acceptor_ = std::make_unique<asio::ip::tcp::acceptor>(io);
-  acceptor_->open(address.is_v6() ? asio::ip::tcp::v6() : asio::ip::tcp::v4(),
-                  ec);
+  acceptor_->open(address.is_v6() ? asio::ip::tcp::v6() : asio::ip::tcp::v4(), ec);
   if (!ec && address.is_v6()) {
     (void)acceptor_->set_option(asio::ip::v6_only(false), ec);
     if (ec) {
@@ -142,20 +137,18 @@ int32_t Gateway::Initialize(asio::io_context& io, const std::string& ip,
 }
 
 void Gateway::DoAccept() {
-  acceptor_->async_accept(
-      [this](const asio::error_code& ec, asio::ip::tcp::socket socket) {
-        if (!ec) {
-          const uint64_t id =
-              next_session_id_.fetch_add(1, std::memory_order_relaxed);
-          auto session = std::make_shared<Session>(std::move(socket), id, this);
-          {
-            std::unique_lock lock(sessions_mutex_);
-            sessions_[id] = session;
-          }
-          session->Start();
-        }
-        DoAccept();
-      });
+  acceptor_->async_accept([this](const asio::error_code& ec, asio::ip::tcp::socket socket) {
+    if (!ec) {
+      const uint64_t id = next_session_id_.fetch_add(1, std::memory_order_relaxed);
+      auto session = std::make_shared<Session>(std::move(socket), id, this);
+      {
+        std::unique_lock lock(sessions_mutex_);
+        sessions_[id] = session;
+      }
+      session->Start();
+    }
+    DoAccept();
+  });
 }
 
 void Gateway::RegisterHandler(uint32_t msg_type, MessageHandler handler) {
@@ -163,8 +156,7 @@ void Gateway::RegisterHandler(uint32_t msg_type, MessageHandler handler) {
   handlers_[msg_type] = std::move(handler);
 }
 
-void Gateway::OnReceive(uint64_t session_id, uint64_t player_id,
-                        const std::vector<uint8_t>& msg) {
+void Gateway::OnReceive(uint64_t session_id, uint64_t player_id, const std::vector<uint8_t>& msg) {
   if (msg.size() < sizeof(uint32_t))
     return;
 

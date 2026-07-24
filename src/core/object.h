@@ -34,13 +34,11 @@ class GameObject {
 
   // Read the component under its object lock. The pointer is valid only for
   // the duration of the callback.
-  void ReadComponent(ComponentType type,
-                     const ReadComponentCallback& callback) const;
+  void ReadComponent(ComponentType type, const ReadComponentCallback& callback) const;
 
   // Replace the component under its object lock.
   void WriteComponent(ComponentType type, ComponentData data) const;
-  [[nodiscard]] bool WriteComponent(ComponentType type, const Schema& schema,
-                                    ComponentData data) const;
+  [[nodiscard]] bool WriteComponent(ComponentType type, const Schema& schema, ComponentData data) const;
 
   [[nodiscard]] bool RemoveComponent(ComponentType type) const;
   [[nodiscard]] bool ApplyOutputDelta(const std::vector<uint8_t>& output) const;

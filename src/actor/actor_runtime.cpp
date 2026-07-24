@@ -33,8 +33,7 @@ void ActorRuntime::Tick(uint64_t now_ms) {
   }
 }
 
-void ActorRuntime::SendMessage(uint64_t from_id, uint64_t to_id,
-                               const std::vector<uint8_t>& payload) {
+void ActorRuntime::SendMessage(uint64_t from_id, uint64_t to_id, const std::vector<uint8_t>& payload) {
   std::shared_ptr<Actor> actor;
   {
     std::shared_lock lock(actors_mutex_);

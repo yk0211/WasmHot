@@ -16,8 +16,7 @@ void BattleActor::Tick(uint64_t now_ms) {
   InvokeModule("ai_decision", "decide", tick_context);
 }
 
-void BattleActor::HandleMessage(uint64_t sender_id,
-                                const std::vector<uint8_t>& payload) {
+void BattleActor::HandleMessage(uint64_t sender_id, const std::vector<uint8_t>& payload) {
   (void)sender_id;
   InvokeModule("battle_rules", "handle_message", payload);
 }

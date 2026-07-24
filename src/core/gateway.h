@@ -22,16 +22,12 @@ class Gateway : public Singleton<Gateway> {
   friend class Singleton<Gateway>;
 
  public:
-  using MessageHandler =
-      std::function<void(uint64_t session_id, uint64_t player_id,
-                         const std::vector<uint8_t>& msg)>;
+  using MessageHandler = std::function<void(uint64_t session_id, uint64_t player_id, const std::vector<uint8_t>& msg)>;
 
-  int32_t Initialize(asio::io_context& io, const std::string& ip,
-                     uint16_t port);
+  int32_t Initialize(asio::io_context& io, const std::string& ip, uint16_t port);
 
   void RegisterHandler(uint32_t msg_type, MessageHandler handler);
-  void OnReceive(uint64_t session_id, uint64_t player_id,
-                 const std::vector<uint8_t>& msg);
+  void OnReceive(uint64_t session_id, uint64_t player_id, const std::vector<uint8_t>& msg);
   void Send(uint64_t session_id, const std::vector<uint8_t>& msg);
 
   asio::io_context* GetIoContext() const { return io_; }

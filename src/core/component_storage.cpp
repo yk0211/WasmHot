@@ -2,8 +2,7 @@
 
 namespace wasmh {
 
-void ComponentStorage::Read(uint64_t object_id, ComponentType type,
-                            const ReadCallback& callback) const {
+void ComponentStorage::Read(uint64_t object_id, ComponentType type, const ReadCallback& callback) const {
   std::shared_lock map_lock(map_mutex_);
   auto it = store_.find(object_id);
   if (it == store_.end()) {
@@ -16,8 +15,7 @@ void ComponentStorage::Read(uint64_t object_id, ComponentType type,
   callback(jt != it->second->components.end() ? &jt->second : nullptr);
 }
 
-void ComponentStorage::Write(uint64_t object_id, ComponentType type,
-                             ComponentData data) {
+void ComponentStorage::Write(uint64_t object_id, ComponentType type, ComponentData data) {
   std::unique_ptr<ObjectComponents> new_obj;
 
   std::shared_lock map_lock(map_mutex_);
@@ -36,8 +34,7 @@ void ComponentStorage::Write(uint64_t object_id, ComponentType type,
   it->second->components[type] = std::move(data);
 }
 
-bool ComponentStorage::Write(uint64_t object_id, ComponentType type,
-                             const Schema& schema, ComponentData data) {
+bool ComponentStorage::Write(uint64_t object_id, ComponentType type, const Schema& schema, ComponentData data) {
   if (data.size() != schema.total_size)
     return false;
   Write(object_id, type, std::move(data));

@@ -10,7 +10,7 @@ BasedOnStyle: Google
 
 # Google defaults (explicit for clarity)
 IndentWidth: 2
-ColumnLimit: 80
+ColumnLimit: 120
 UseTab: Never
 
 AllowShortFunctionsOnASingleLine: Inline

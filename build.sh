@@ -185,7 +185,7 @@ if [[ $BUILD_FAILED -eq 1 ]]; then
 fi
 
 if [[ $RUN_TIDY -eq 1 ]]; then
-    echo "==> Step 4/4: Running clang-tidy..."
+    echo "==> Step 4/4: Running clang-tidy with $JOBS parallel job(s)..."
 
     if [[ ! -f "$BUILD_DIR/compile_commands.json" ]]; then
         echo "Error: compile_commands.json not found in $BUILD_DIR" >&2
@@ -193,14 +193,37 @@ if [[ $RUN_TIDY -eq 1 ]]; then
     fi
 
     TIDY_LOG="$BUILD_DIR/clang-tidy.log"
-    echo "clang-tidy warnings will be saved to: $TIDY_LOG"
+    TIDY_LOG_DIR="$BUILD_DIR/clang-tidy-logs"
+    echo "clang-tidy summary will be saved to: $TIDY_LOG"
+    echo "clang-tidy per-file logs will be saved to: $TIDY_LOG_DIR"
+    mkdir -p "$TIDY_LOG_DIR"
+
+    run_tidy_file() {
+        local src="$1"
+        local rel="${src#$PROJECT_ROOT/}"
+        # Escape '_' -> '__' and '/' -> '_' so the relative path is reversible
+        # and unique in the log file name.
+        local name
+        name="$(printf '%s' "$rel" | sed 's/_/__/g; s/\//_/g')"
+        local out="$TIDY_LOG_DIR/${name}.log"
+        "$CLANG_TIDY" -p "$BUILD_DIR" "$src" >"$out" 2>&1 || true
+    }
+    export -f run_tidy_file
+    export CLANG_TIDY BUILD_DIR PROJECT_ROOT TIDY_LOG_DIR
+
+    # Remove stale per-file logs before this run.
+    find "$TIDY_LOG_DIR" -maxdepth 1 -type f -name '*.log' -delete
 
     find "$PROJECT_ROOT/src" -type f \
         \( -name '*.cpp' -o -name '*.cc' -o -name '*.c' \) \
-        -print0 | xargs -0 "${CLANG_TIDY}" -p "$BUILD_DIR" 2>&1 | tee "$TIDY_LOG"
+        -print0 | xargs -0 -r -P "$JOBS" -I{} \
+            bash -c 'run_tidy_file "$1"' _ {}
+
+    find "$TIDY_LOG_DIR" -maxdepth 1 -type f -name '*.log' -print0 | \
+        xargs -0 -r cat > "$TIDY_LOG"
 
     if grep -qE 'warning:|error:' "$TIDY_LOG"; then
-        echo "clang-tidy finished with warnings/errors (see $TIDY_LOG)."
+        echo "clang-tidy finished with warnings/errors (see $TIDY_LOG and $TIDY_LOG_DIR)."
     else
         echo "clang-tidy done."
     fi

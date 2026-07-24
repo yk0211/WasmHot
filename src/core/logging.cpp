@@ -35,8 +35,7 @@ static std::string GetLogFilename() {
 
 class DateRotatingFileSink : public spdlog::sinks::base_sink<std::mutex> {
  public:
-  DateRotatingFileSink(std::string base_filename, std::size_t max_size,
-                       std::size_t max_files)
+  DateRotatingFileSink(std::string base_filename, std::size_t max_size, std::size_t max_files)
       : base_filename_(std::move(base_filename)),
         max_size_(std::max(max_size, g_min_file_size)),
         max_files_(std::min(max_files, g_max_file_num)) {
@@ -66,8 +65,7 @@ class DateRotatingFileSink : public spdlog::sinks::base_sink<std::mutex> {
   void flush_() override { file_helper_.flush(); }
 
  private:
-  static std::string CalcFilename(const std::string& filename,
-                                  std::size_t index) {
+  static std::string CalcFilename(const std::string& filename, std::size_t index) {
     if (index == 0)
       return filename;
     return filename + "." + std::to_string(index);
@@ -107,16 +105,13 @@ class DateRotatingFileSink : public spdlog::sinks::base_sink<std::mutex> {
   spdlog::details::file_helper file_helper_;
 };
 
-void InitLogging(const std::string& logger_name, const std::string& log_level,
-                 const std::string& flush_log_level, std::size_t file_size,
-                 std::size_t rotate_file_num) {
+void InitLogging(const std::string& logger_name, const std::string& log_level, const std::string& flush_log_level,
+                 std::size_t file_size, std::size_t rotate_file_num) {
   std::string filename = GetLogFilename();
-  auto file_sink = std::make_shared<DateRotatingFileSink>(filename, file_size,
-                                                          rotate_file_num);
+  auto file_sink = std::make_shared<DateRotatingFileSink>(filename, file_size, rotate_file_num);
   file_sink->set_pattern("[%Y-%m-%d %H:%M:%S.%e][%P][%t][%!:%s:%#] %v");
 
-  auto logger = std::make_shared<spdlog::logger>(
-      logger_name, spdlog::sinks_init_list{file_sink});
+  auto logger = std::make_shared<spdlog::logger>(logger_name, spdlog::sinks_init_list{file_sink});
   spdlog::set_default_logger(logger);
   spdlog::set_level(spdlog::level::from_str(log_level));
   spdlog::flush_on(spdlog::level::from_str(flush_log_level));

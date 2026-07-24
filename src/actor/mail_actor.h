@@ -14,8 +14,7 @@ class MailActor : public ActorWithObject {
   void Tick(uint64_t now_ms) override;
 
  protected:
-  void HandleMessage(uint64_t sender_id,
-                     const std::vector<uint8_t>& payload) override;
+  void HandleMessage(uint64_t sender_id, const std::vector<uint8_t>& payload) override;
 };
 
 }  // namespace wasmh

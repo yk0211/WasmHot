@@ -155,6 +155,7 @@ add_library(WasmHotLib STATIC
     src/actor/room_actor.cpp
     src/actor/mail_actor.cpp
     src/core/gateway.cpp
+    src/core/signal_handler.cpp
     src/plugin/wasmedge_plugin.cpp
 )
 

@@ -14,8 +14,7 @@ class WasmEdgePlugin : public IPlugin {
 
   bool Initialize() override;
   void Shutdown() override;
-  bool Execute(GameObject& obj, const std::string& action,
-               const std::vector<uint8_t>& input,
+  bool Execute(GameObject& obj, const std::string& action, const std::vector<uint8_t>& input,
                std::vector<uint8_t>& output) override;
   [[nodiscard]] std::unique_ptr<IPlugin> Clone() const override;
 
@@ -30,8 +29,7 @@ class WasmEdgePlugin : public IPlugin {
 
 class WasmEdgePluginFactory : public PluginFactory {
  public:
-  std::unique_ptr<IPlugin> Create(const std::string& path,
-                                  uint32_t schema_version) override;
+  std::unique_ptr<IPlugin> Create(const std::string& path, uint32_t schema_version) override;
 };
 
 }  // namespace wasmh

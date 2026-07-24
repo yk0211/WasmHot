@@ -6,8 +6,7 @@ uint64_t MigrationEngine::MakeKey(uint32_t from, uint32_t to) {
   return (static_cast<uint64_t>(from) << 32) | static_cast<uint64_t>(to);
 }
 
-void MigrationEngine::Register(uint32_t from_version, uint32_t to_version,
-                               MigrationFunc func) {
+void MigrationEngine::Register(uint32_t from_version, uint32_t to_version, MigrationFunc func) {
   std::unique_lock lock(mutex_);
   migrations_[MakeKey(from_version, to_version)] = std::move(func);
 }

@@ -12,14 +12,12 @@ namespace wasmh {
 
 Actor::Actor(asio::io_context& io) : strand_(asio::make_strand(io)) {}
 
-void Actor::EnqueueMessage(uint64_t sender_id,
-                           const std::vector<uint8_t>& payload) {
+void Actor::EnqueueMessage(uint64_t sender_id, const std::vector<uint8_t>& payload) {
   std::scoped_lock lock(mailbox_mutex_);
   const bool was_empty = mailbox_.empty();
   mailbox_.push_back({sender_id, payload});
   if (was_empty) {
-    asio::post(strand_,
-               [self = shared_from_this()]() { self->ProcessMessages(); });
+    asio::post(strand_, [self = shared_from_this()]() { self->ProcessMessages(); });
   }
 }
 
@@ -41,8 +39,7 @@ void Actor::ScheduleTick(uint64_t now_ms) {
   });
 }
 
-ActorWithObject::ActorWithObject(asio::io_context& io, uint64_t object_id,
-                                 const std::vector<std::string>& module_names)
+ActorWithObject::ActorWithObject(asio::io_context& io, uint64_t object_id, const std::vector<std::string>& module_names)
     : Actor(io), object_id_(object_id) {
   auto* modules = ModuleManager::Instance();
   for (const auto& name : module_names) {
@@ -56,28 +53,25 @@ ActorWithObject::ActorWithObject(asio::io_context& io, uint64_t object_id,
   }
 }
 
-void ActorWithObject::InvokeModule(const std::string& module_name,
-                                   const std::string& action,
+void ActorWithObject::InvokeModule(const std::string& module_name, const std::string& action,
                                    const std::vector<uint8_t>& input) {
   auto it = plugins_.find(module_name);
   if (it == plugins_.end() || !it->second)
     return;
 
   std::shared_ptr<IPlugin> plugin = it->second;
-  ObjectRegistry::Instance()->Get(
-      object_id_, [plugin, action, input](GameObject* obj) {
-        if (!obj)
-          return;
+  ObjectRegistry::Instance()->Get(object_id_, [plugin, action, input](GameObject* obj) {
+    if (!obj)
+      return;
 
-        std::vector<uint8_t> output;
-        if (!plugin->Execute(*obj, action, input, output))
-          return;
+    std::vector<uint8_t> output;
+    if (!plugin->Execute(*obj, action, input, output))
+      return;
 
-        if (!obj->ApplyOutputDelta(output)) {
-          WARN("Actor {} failed to apply output delta for action {}",
-               obj->header.object_id, action);
-        }
-      });
+    if (!obj->ApplyOutputDelta(output)) {
+      WARN("Actor {} failed to apply output delta for action {}", obj->header.object_id, action);
+    }
+  });
 }
 
 }  // namespace wasmh

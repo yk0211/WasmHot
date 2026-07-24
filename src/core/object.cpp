@@ -8,8 +8,7 @@ namespace wasmh {
 
 constexpr uint32_t g_delta_magic = 0x4D534157;  // "WASM" little-endian
 
-void GameObject::ReadComponent(ComponentType type,
-                               const ReadComponentCallback& callback) const {
+void GameObject::ReadComponent(ComponentType type, const ReadComponentCallback& callback) const {
   if (storage == nullptr) {
     callback(nullptr);
     return;
@@ -23,8 +22,7 @@ void GameObject::WriteComponent(ComponentType type, ComponentData data) const {
   }
 }
 
-bool GameObject::WriteComponent(ComponentType type, const Schema& schema,
-                                ComponentData data) const {
+bool GameObject::WriteComponent(ComponentType type, const Schema& schema, ComponentData data) const {
   if (storage == nullptr)
     return false;
   return storage->Write(header.object_id, type, schema, std::move(data));

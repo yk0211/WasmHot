@@ -15,8 +15,7 @@ uint64_t ObjectRegistry::Create(const ObjectHeader& header) {
   return header.object_id;
 }
 
-void ObjectRegistry::Get(uint64_t object_id,
-                         const ObjectCallback& callback) const {
+void ObjectRegistry::Get(uint64_t object_id, const ObjectCallback& callback) const {
   std::shared_lock lock(map_mutex_);
   auto it = objects_.find(object_id);
   if (it == objects_.end()) {
